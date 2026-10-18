@@ -14,12 +14,11 @@ import { Enrollment } from "@/models/Enrollment";
 const sendMessageSchema = z.object({
   conversationId: z.string().optional(),
   recipientId: z.string().optional(),
-  text: z
-    .string()
-    .trim()
-    .min(1, "মেসেজের বিষয়বস্তু লিখুন")
-    .max(2000, "মেসেজ সর্বোচ্চ ২০০০ অক্ষরের মধ্যে হতে হবে"),
+  text: z.string().trim().max(2000, "মেসেজ সর্বোচ্চ ২০০০ অক্ষরের মধ্যে হতে হবে").optional().default(""),
+  imageUrl: z.string().trim().optional(),
   attachments: z.array(z.any()).optional(),
+}).refine((data) => (data.text && data.text.trim().length > 0) || (data.imageUrl && data.imageUrl.trim().length > 0) || (data.attachments && data.attachments.length > 0), {
+  message: "বার্তা লিখুন অথবা একটি ছবি নির্বাচন করুন",
 });
 
 export const GET = createApiHandler(
@@ -55,7 +54,6 @@ export const GET = createApiHandler(
       });
 
       // To fetch the most recent messages while paging backwards:
-      // skip = Math.max(0, totalCount - (page * limit))
       const skip = Math.max(0, totalCount - page * limit);
       const effectiveLimit = Math.min(limit, totalCount - (page - 1) * limit);
 
@@ -96,9 +94,11 @@ export const GET = createApiHandler(
 
     // ==========================================
     // 2. Fetch User's Active Conversations with Unread Counts
+    // (excluding conversations deleted from user's inbox)
     // ==========================================
     const conversations = await Conversation.find({
       participants: session.userId,
+      deletedFor: { $ne: session.userId },
       status: "active",
     })
       .populate("participants", "fullName role avatarUrl phone")
@@ -133,27 +133,25 @@ export const POST = createApiHandler(
     const body = await req.json();
     const validated = sendMessageSchema.parse(body);
 
-    // Strictly disallow file attachments until upload validation & virus scans are deployed
-    if (validated.attachments && validated.attachments.length > 0) {
-      throw AppError.badRequest(
-        "Attachments not permitted",
-        "নিরাপত্তার স্বার্থে ফাইল বা ছবি সংযুক্তি এখনো অনুমোদিত নয়।"
-      );
-    }
-
-    // Rate Limiting Check: Max 15 messages in the last 60 seconds per user
+    // Rate Limiting Check: Max 20 messages in the last 60 seconds per user
     const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
     const recentCount = await Message.countDocuments({
       sender: session.userId,
       createdAt: { $gte: oneMinuteAgo },
     });
 
-    if (recentCount >= 15) {
+    if (recentCount >= 20) {
       throw AppError.tooManyRequests(
         "Rate limit exceeded",
         "আপনি খুব দ্রুত বার্তা পাঠাচ্ছেন। অনুগ্রহ করে কিছুক্ষণ অপেক্ষা করুন।"
       );
     }
+
+    const finalImageUrl =
+      validated.imageUrl ||
+      (validated.attachments && validated.attachments.length > 0
+        ? validated.attachments[0]?.url || validated.attachments[0]
+        : undefined);
 
     let conversation;
 
@@ -244,18 +242,22 @@ export const POST = createApiHandler(
       );
     }
 
+    const messageText = validated.text?.trim() || (finalImageUrl ? "📷 ছবি" : "");
+
     // Create Message
     const message = await Message.create({
       conversation: conversation._id,
       sender: session.userId,
-      text: validated.text,
+      text: messageText,
+      imageUrl: finalImageUrl,
       readBy: [session.userId],
       status: "sent",
     });
 
-    // Update Conversation lastMessage
+    // Unhide conversation for any participant who previously deleted it
+    conversation.deletedFor = [];
     conversation.lastMessage = {
-      text: validated.text,
+      text: messageText,
       sender: session.userId as any,
       sentAt: new Date(),
     };
@@ -266,6 +268,123 @@ export const POST = createApiHandler(
       .lean();
 
     return apiCreated(populatedMessage, "মেসেজ সফলভাবে পাঠানো হয়েছে।");
+  },
+  { requireDb: true }
+);
+
+const editMessageSchema = z.object({
+  messageId: z.string().min(1, "মেসেজ আইডি আবশ্যক"),
+  text: z.string().trim().min(1, "নতুন বার্তা লিখুন").max(2000),
+});
+
+export const PATCH = createApiHandler(
+  async (req: NextRequest) => {
+    const session = await getAuthenticatedUser(req);
+    const body = await req.json();
+    const { messageId, text } = editMessageSchema.parse(body);
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      throw AppError.notFound("Message not found", "মেসেজটি পাওয়া যায়নি।");
+    }
+
+    if (message.sender.toString() !== session.userId) {
+      throw AppError.forbidden(
+        "Forbidden",
+        "শুধুমাত্র নিজের পাঠানো বার্তা এডিট করতে পারবেন।"
+      );
+    }
+
+    if (message.isDeleted) {
+      throw AppError.badRequest(
+        "Already deleted",
+        "মুছে ফেলা বার্তা এডিট করা যাবে না।"
+      );
+    }
+
+    // 1 Day (24 hours) check: After 1 day cannot edit anymore
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    const diffMs = Date.now() - new Date(message.createdAt).getTime();
+    if (diffMs > oneDayMs) {
+      throw AppError.badRequest(
+        "Edit window expired",
+        "বার্তা পাঠানোর ১ দিন (২৪ ঘণ্টা) পার হয়ে যাওয়ায় এটি আর এডিট করা সম্ভব নয়।"
+      );
+    }
+
+    message.text = text;
+    message.isEdited = true;
+    message.editedAt = new Date();
+    await message.save();
+
+    const populated = await Message.findById(messageId)
+      .populate("sender", "fullName role avatarUrl")
+      .lean();
+
+    return apiSuccess(populated, "বার্তাটি সফলভাবে এডিট করা হয়েছে।");
+  },
+  { requireDb: true }
+);
+
+export const DELETE = createApiHandler(
+  async (req: NextRequest) => {
+    const session = await getAuthenticatedUser(req);
+    const searchParams = req.nextUrl.searchParams;
+    const messageId = searchParams.get("messageId");
+    const conversationId = searchParams.get("conversationId");
+
+    // Case 1: Delete a Message
+    if (messageId) {
+      const message = await Message.findById(messageId);
+      if (!message) {
+        throw AppError.notFound("Message not found", "মেসেজটি পাওয়া যায়নি।");
+      }
+
+      if (
+        message.sender.toString() !== session.userId &&
+        session.role !== "super_admin"
+      ) {
+        throw AppError.forbidden("Forbidden", "মেসেজটি মোছার অনুমতি নেই।");
+      }
+
+      message.isDeleted = true;
+      message.deletedAt = new Date();
+      message.text = "এই বার্তাটি মুছে ফেলা হয়েছে";
+      message.imageUrl = undefined;
+      await message.save();
+
+      return apiSuccess({ messageId }, "বার্তা মুছে ফেলা হয়েছে।");
+    }
+
+    // Case 2: Delete Conversation from User's Inbox
+    if (conversationId) {
+      const conversation = await Conversation.findOne({
+        _id: conversationId,
+        participants: session.userId,
+      });
+
+      if (!conversation) {
+        throw AppError.notFound(
+          "Conversation not found",
+          "কথোপকথনটি পাওয়া যায়নি।"
+        );
+      }
+
+      await Conversation.updateOne(
+        { _id: conversationId },
+        { $addToSet: { deletedFor: session.userId } }
+      );
+
+      return apiSuccess(
+        { conversationId },
+        "কথোপকথনটি ইনবক্স থেকে মুছে ফেলা হয়েছে।"
+      );
+    }
+
+    throw AppError.badRequest(
+      "Invalid request",
+      "messageId বা conversationId প্রদান করুন।"
+    );
   },
   { requireDb: true }
 );

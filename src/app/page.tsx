@@ -19,6 +19,7 @@ import {
   MessageCircle,
   ChevronRight,
   GraduationCap,
+  Images,
 } from "lucide-react";
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { PublicFooter } from "@/components/layout/PublicFooter";
@@ -35,9 +36,6 @@ import { ClassroomGallery } from "@/components/public/ClassroomGallery";
 import { toBanglaNumber, formatBanglaDate } from "@/lib/utils";
 import {
   getSiteSettings,
-  getActiveTeachers,
-  getLatestNotices,
-  getRecentBlogPosts,
   getUpcomingEvents,
   getActiveBatchesWithDetails,
 } from "@/lib/public-data";
@@ -45,11 +43,8 @@ import {
 export const revalidate = 60; // ISR Revalidate every 60 seconds
 
 export default async function HomePage() {
-  const [settings, teachers, notices, blogPosts, events, batches] = await Promise.all([
+  const [settings, events, batches] = await Promise.all([
     getSiteSettings(),
-    getActiveTeachers(),
-    getLatestNotices(4),
-    getRecentBlogPosts(3),
     getUpcomingEvents(3),
     getActiveBatchesWithDetails(),
   ]);
@@ -132,7 +127,7 @@ export default async function HomePage() {
     { label: "সফল শিক্ষার্থী", value: `${toBanglaNumber(3500)}+` },
     {
       label: "অভিজ্ঞ শিক্ষক",
-      value: `${toBanglaNumber(teachers.length > 0 ? teachers.length : 25)}+`,
+      value: `${toBanglaNumber(25)}+`,
     },
     {
       label: "সক্রিয় ব্যাচ",
@@ -350,155 +345,7 @@ export default async function HomePage() {
         {/* Modern Classrooms & Facilities Section */}
         <ClassroomGallery />
 
-        {/* Latest Notices & Announcements Section */}
-        {notices.length > 0 && (
-          <section className="py-14 bg-slate-50 border-b border-slate-200">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-              <div className="flex items-end justify-between flex-wrap gap-4">
-                <div>
-                  <Badge variant="default" size="sm">
-                    বিজ্ঞপ্তি বোর্ড
-                  </Badge>
-                  <h2 className="text-2xl font-bold text-slate-900 mt-1">
-                    সাম্প্রতিক নোটিশ ও নোটিফিকেশন
-                  </h2>
-                </div>
-                <Link
-                  href="/notices"
-                  className="text-xs font-bold text-[#00636b] hover:underline flex items-center gap-1"
-                >
-                  <span>সকল নোটিশ দেখুন</span>
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {notices.map(
-                  (n: {
-                    _id: string;
-                    title: string;
-                    slug: string;
-                    publishedAt?: string;
-                    priority?: string;
-                    isPinned?: boolean;
-                    content?: string;
-                  }) => (
-                    <Link key={n._id} href={`/notices/${n.slug}`}>
-                      <div className="p-4 bg-white rounded-xl border border-slate-200 hover:border-[#00636b] hover:shadow-xs transition group">
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[11px] text-slate-400 font-medium">
-                              {formatBanglaDate(
-                                n.publishedAt || new Date().toISOString()
-                              )}
-                            </span>
-                            {n.isPinned && (
-                              <Badge variant="gold" className="text-[10px] py-0 px-1.5">
-                                শীর্ষে পিন
-                              </Badge>
-                            )}
-                          </div>
-                          <Badge
-                            variant={n.priority === "urgent" ? "danger" : "default"}
-                            className="text-[10px] py-0 px-1.5"
-                          >
-                            {n.priority === "urgent" ? "জরুরি" : "সাধারণ"}
-                          </Badge>
-                        </div>
-                        <h3 className="font-bold text-sm text-slate-900 group-hover:text-[#00636b] transition line-clamp-1">
-                          {n.title}
-                        </h3>
-                        <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
-                          {n.content?.replace(/<[^>]+>/g, "").slice(0, 120)}...
-                        </p>
-                      </div>
-                    </Link>
-                  )
-                )}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Featured Teachers Directory Preview */}
-        {teachers.length > 0 && (
-          <section className="py-16 bg-white border-b border-slate-200">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-              <div className="flex items-end justify-between flex-wrap gap-4">
-                <div>
-                  <Badge variant="primary" size="sm">
-                    শিক্ষকমণ্ডলী
-                  </Badge>
-                  <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">
-                    আমাদের অভিজ্ঞ শিক্ষকবৃন্দ
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-1">
-                    বিষয়ভিত্তিক দক্ষ ও অভিজ্ঞ শিক্ষকদের নিবিড় তত্ত্বাবধান
-                  </p>
-                </div>
-                <Link
-                  href="/teachers"
-                  className="text-xs font-bold text-[#00636b] hover:underline flex items-center gap-1"
-                >
-                  <span>সকল শিক্ষক দেখুন</span>
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {teachers
-                  .slice(0, 4)
-                  .map(
-                    (t: {
-                      _id: string;
-                      fullName: string;
-                      designation?: string;
-                      educationalQualifications?: string[];
-                      subjects?: string[];
-                      bio?: string;
-                      photoUrl?: string;
-                    }) => (
-                      <Link key={t._id} href={`/teachers/${t._id}`} className="group">
-                        <Card className="border border-slate-200 overflow-hidden hover:border-[#00636b] hover:shadow-xs transition h-full flex flex-col justify-between">
-                          <div className="p-5 text-center space-y-3">
-                            <div className="h-24 w-24 mx-auto rounded-full bg-slate-100 border-2 border-teal-100 flex items-center justify-center overflow-hidden">
-                              {t.photoUrl ? (
-                                <Image
-                                  src={t.photoUrl}
-                                  alt={t.fullName}
-                                  width={96}
-                                  height={96}
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <GraduationCap className="h-10 w-10 text-[#00636b]" />
-                              )}
-                            </div>
-                            <div>
-                              <h3 className="font-bold text-base text-slate-900 group-hover:text-[#00636b] transition">
-                                {t.fullName}
-                              </h3>
-                              <p className="text-xs text-[#00636b] font-medium mt-0.5">
-                                {t.designation || "বিষয় শিক্ষক"}
-                              </p>
-                              <p className="text-[11px] text-slate-500 mt-0.5">
-                                {t.educationalQualifications?.[0] || "অভিজ্ঞ শিক্ষক"}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 text-center">
-                            <span className="text-xs font-semibold text-slate-600">
-                              {t.subjects?.join(", ") || "সকল বিষয়"}
-                            </span>
-                          </div>
-                        </Card>
-                      </Link>
-                    )
-                  )}
-              </div>
-            </div>
-          </section>
-        )}
 
         {/* Why Choose Us Features Section */}
         <section className="py-16 bg-slate-50 border-b border-slate-200">
@@ -567,114 +414,72 @@ export default async function HomePage() {
                     startDate: string;
                     description?: string;
                     isFeatured?: boolean;
-                  }) => (
-                    <Link key={ev._id} href={`/events/${ev._id}`} className="group">
-                      <Card className="border border-slate-200 hover:border-[#00636b] hover:shadow-xs transition h-full flex flex-col justify-between">
-                        <CardHeader className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-semibold text-[#c27a29] flex items-center gap-1">
-                              <Calendar className="h-3.5 w-3.5" />
-                              {formatBanglaDate(ev.startDate)}
-                            </span>
-                            {ev.isFeatured && (
-                              <Badge variant="primary" className="text-[10px]">
-                                ফিচার্ড
-                              </Badge>
-                            )}
-                          </div>
-                          <CardTitle className="text-base text-slate-900 group-hover:text-[#00636b] transition">
-                            {ev.title}
-                          </CardTitle>
-                          <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-                            {ev.description}
-                          </p>
-                        </CardHeader>
-                        <CardContent className="pt-0">
-                          <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
-                            <MapPin className="h-3.5 w-3.5 text-[#00636b]" />
-                            <span>{ev.venue}</span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  )
-                )}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Recent Blog Posts Section */}
-        {blogPosts.length > 0 && (
-          <section className="py-16 bg-slate-50 border-b border-slate-200">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-              <div className="flex items-end justify-between flex-wrap gap-4">
-                <div>
-                  <Badge variant="primary" size="sm">
-                    শিক্ষামূলক ব্লগ
-                  </Badge>
-                  <h2 className="text-2xl font-bold text-slate-900 mt-1">
-                    পড়াশোনা ও পরীক্ষার টিপস
-                  </h2>
-                </div>
-                <Link
-                  href="/blog"
-                  className="text-xs font-bold text-[#00636b] hover:underline flex items-center gap-1"
-                >
-                  <span>সকল ব্লগ দেখুন</span>
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {blogPosts.map(
-                  (post: {
-                    _id: string;
-                    title: string;
-                    slug: string;
-                    summary?: string;
                     coverImage?: string;
-                    publishedAt?: string;
-                  }) => (
-                    <Link key={post._id} href={`/blog/${post.slug}`} className="group">
-                      <Card className="border border-slate-200 overflow-hidden hover:border-[#00636b] hover:shadow-xs transition h-full flex flex-col justify-between">
-                        {post.coverImage && (
-                          <div className="relative h-44 w-full bg-slate-100 overflow-hidden">
-                            <Image
-                              src={post.coverImage}
-                              alt={post.title}
-                              fill
-                              className="object-cover group-hover:scale-105 transition duration-300"
-                            />
-                          </div>
-                        )}
-                        <CardHeader className="space-y-2">
-                          <span className="text-[11px] text-slate-400 font-medium">
-                            {formatBanglaDate(
-                              post.publishedAt || new Date().toISOString()
-                            )}
-                          </span>
-                          <CardTitle className="text-base text-slate-900 group-hover:text-[#00636b] transition line-clamp-2">
-                            {post.title}
-                          </CardTitle>
-                          <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-                            {post.summary}
-                          </p>
-                        </CardHeader>
-                        <CardContent className="pt-0">
-                          <span className="text-xs font-bold text-[#00636b] flex items-center gap-1 group-hover:underline">
-                            <span>সম্পূর্ণ পড়ুন</span>
-                            <ArrowRight className="h-3 w-3" />
-                          </span>
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  )
+                    images?: string[];
+                  }) => {
+                    const coverPhoto =
+                      ev.coverImage || (ev.images && ev.images[0]) || "";
+                    const totalImages =
+                      ev.images && ev.images.length > 0
+                        ? ev.images.length
+                        : ev.coverImage
+                        ? 1
+                        : 0;
+
+                    return (
+                      <Link key={ev._id} href={`/events/${ev._id}`} className="group">
+                        <Card className="border border-slate-200 overflow-hidden hover:border-[#00636b] hover:shadow-xs transition h-full flex flex-col justify-between">
+                          {coverPhoto && (
+                            <div className="relative h-44 w-full bg-slate-100 overflow-hidden">
+                              <img
+                                src={coverPhoto}
+                                alt={ev.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                              />
+                              {totalImages > 1 && (
+                                <span className="absolute bottom-2 right-2 bg-black/75 backdrop-blur-xs text-white text-[10px] font-medium px-1.5 py-0.5 rounded flex items-center gap-1 shadow-xs">
+                                  <Images className="h-3 w-3" />
+                                  <span>{toBanglaNumber(totalImages)}</span>
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          <CardHeader className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-semibold text-[#c27a29] flex items-center gap-1">
+                                <Calendar className="h-3.5 w-3.5" />
+                                {formatBanglaDate(ev.startDate)}
+                              </span>
+                              {ev.isFeatured && (
+                                <Badge variant="primary" className="text-[10px]">
+                                  ফিচার্ড
+                                </Badge>
+                              )}
+                            </div>
+                            <CardTitle className="text-base text-slate-900 group-hover:text-[#00636b] transition line-clamp-2">
+                              {ev.title}
+                            </CardTitle>
+                            <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                              {ev.description}
+                            </p>
+                          </CardHeader>
+                          <CardContent className="pt-0">
+                            <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+                              <MapPin className="h-3.5 w-3.5 text-[#00636b]" />
+                              <span>{ev.venue}</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    );
+                  }
                 )}
               </div>
             </div>
           </section>
         )}
+
+
 
         {/* Admission CTA Banner */}
         <section className="py-14 bg-[#004f56] text-white">

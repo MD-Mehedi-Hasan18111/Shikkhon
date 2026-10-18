@@ -29,6 +29,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { useAppSelector } from "@/store";
 import { formatBanglaMessageTime, parseSafeMessageText } from "@/lib/message-utils";
 import { useSocketChat } from "@/lib/socket-client";
+import { ChatConversationView } from "@/components/chat/ChatConversationView";
 
 export default function TeacherMessagesPage() {
   const currentUser = useAppSelector((state) => state.auth.user);
@@ -220,28 +221,65 @@ export default function TeacherMessagesPage() {
     }
   };
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!replyText.trim() || !activeConversationId || sending) return;
-
-    setSending(true);
-    const textToSend = replyText.trim();
-    setReplyText("");
+  const handleSendMessage = async (text: string, imageUrl?: string) => {
+    if ((!text.trim() && !imageUrl) || !activeConversationId) return;
 
     try {
-      const newMsg = await socketSendMessage(textToSend);
+      const newMsg = await socketSendMessage(text, imageUrl);
       if (newMsg) {
         setMessages((prev) => {
           if (prev.some((m) => m._id === newMsg._id)) return prev;
           return [...prev, newMsg];
         });
       }
+      await fetchConversations();
     } catch {
-      // Fallback message reload
       await loadMessages(activeConversationId, 1);
-    } finally {
-      setSending(false);
     }
+  };
+
+  const handleEditMessage = async (messageId: string, newText: string) => {
+    const res = await fetch("/api/messages", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messageId, text: newText }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || "এডিট ব্যর্থ হয়েছে");
+    }
+    setMessages((prev) =>
+      prev.map((m) => (m._id === messageId ? { ...m, text: newText, isEdited: true } : m))
+    );
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    const res = await fetch(`/api/messages?messageId=${messageId}`, {
+      method: "DELETE",
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || "মুছে ফেলা সম্ভব হয়নি");
+    }
+    setMessages((prev) =>
+      prev.map((m) =>
+        m._id === messageId
+          ? { ...m, isDeleted: true, text: "এই বার্তাটি মুছে ফেলা হয়েছে", imageUrl: null }
+          : m
+      )
+    );
+  };
+
+  const handleDeleteConversation = async (conversationId: string) => {
+    const res = await fetch(`/api/messages?conversationId=${conversationId}`, {
+      method: "DELETE",
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || "কথোপকথন মোছা যায়নি");
+    }
+    setConversations((prev) => prev.filter((c) => c._id !== conversationId));
+    setActiveConversationId(null);
   };
 
   const handleReportMessage = async () => {
@@ -438,200 +476,23 @@ export default function TeacherMessagesPage() {
         {/* Right Panel: Chat Thread Window */}
         <div className="lg:col-span-8 flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
           {activeConv && otherParticipant ? (
-            <>
-              {/* Thread Header */}
-              <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-[#00636b] text-white flex items-center justify-center font-bold text-sm shadow-2xs">
-                    {otherParticipant.fullName?.charAt(0) || "U"}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-800 text-sm">
-                      {otherParticipant.fullName}
-                    </h3>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] py-0 px-2 border-slate-200 text-slate-600"
-                      >
-                        {otherParticipant.role === "admin" ||
-                        otherParticipant.role === "super_admin"
-                          ? "অ্যাকাডেমিক কর্তৃপক্ষ"
-                          : otherParticipant.role === "student"
-                            ? "শিক্ষার্থী"
-                            : otherParticipant.role === "guardian"
-                              ? "অভিভাবক"
-                              : "শিক্ষক"}
-                      </Badge>
-                      {otherParticipant.phone && (
-                        <span className="text-[11px] text-slate-400 font-mono">
-                          {otherParticipant.phone}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => loadMessages(activeConversationId!, 1)}
-                    className="h-8 gap-1 text-xs"
-                    title="মেসেজ রিফ্রেশ করুন"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Messages Body */}
-              <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/30">
-                {hasMore && (
-                  <div className="text-center py-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => loadMessages(activeConversationId!, page + 1)}
-                      disabled={loadingMore}
-                      className="text-xs text-[#00636b] hover:bg-slate-100"
-                    >
-                      {loadingMore ? (
-                        <>
-                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                          লোড হচ্ছে...
-                        </>
-                      ) : (
-                        "পূর্ববর্তী মেসেজ দেখুন"
-                      )}
-                    </Button>
-                  </div>
-                )}
-
-                {loadingMessages ? (
-                  <div className="space-y-3 p-4">
-                    <Skeleton className="h-10 w-2/3 rounded-xl ml-auto" />
-                    <Skeleton className="h-10 w-1/2 rounded-xl" />
-                    <Skeleton className="h-12 w-3/4 rounded-xl ml-auto" />
-                  </div>
-                ) : messages.length === 0 ? (
-                  <div className="p-8 text-center text-slate-400 space-y-2">
-                    <MessageSquare className="h-8 w-8 mx-auto opacity-30 text-slate-400" />
-                    <p className="text-xs">
-                      এখনো কোনো বার্তা পাঠানো হয়নি। নিচের বক্সে বার্তা লিখুন।
-                    </p>
-                  </div>
-                ) : (
-                  messages.map((msg) => {
-                    const isMe = msg.sender?._id === currentUser?.id;
-                    const parsedParts = parseSafeMessageText(msg.text);
-
-                    return (
-                      <div
-                        key={msg._id}
-                        className={`flex flex-col ${isMe ? "items-end" : "items-start"} group relative`}
-                      >
-                        <div
-                          className={`max-w-[78%] rounded-2xl px-4 py-2.5 text-xs shadow-2xs leading-relaxed ${
-                            isMe
-                              ? "bg-[#00636b] text-white rounded-br-xs"
-                              : "bg-white text-slate-800 border border-slate-200/80 rounded-bl-xs"
-                          }`}
-                        >
-                          <p className="whitespace-pre-wrap break-words">
-                            {parsedParts.map((part, idx) =>
-                              part.type === "link" ? (
-                                <a
-                                  key={idx}
-                                  href={part.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className={`underline inline-flex items-center gap-0.5 font-medium ${
-                                    isMe
-                                      ? "text-[#fde68a] hover:text-white"
-                                      : "text-[#00636b] hover:text-[#004e54]"
-                                  }`}
-                                >
-                                  <span>{part.content}</span>
-                                  <ExternalLink className="h-2.5 w-2.5 inline" />
-                                </a>
-                              ) : (
-                                <span key={idx}>{part.content}</span>
-                              )
-                            )}
-                          </p>
-
-                          <div
-                            className={`flex items-center justify-end gap-1.5 mt-1 text-[10px] ${
-                              isMe ? "text-slate-200" : "text-slate-400"
-                            }`}
-                          >
-                            <span>{formatBanglaMessageTime(msg.createdAt)}</span>
-                            {isMe && (
-                              <span>
-                                {msg.status === "read" ? (
-                                  <span title="পঠিত">
-                                    <CheckCheck className="h-3 w-3 text-emerald-300" />
-                                  </span>
-                                ) : (
-                                  <span title="প্রেরিত">
-                                    <Check className="h-3 w-3 text-slate-300" />
-                                  </span>
-                                )}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Report message option for received messages */}
-                        {!isMe && (
-                          <button
-                            onClick={() => {
-                              setSelectedMessageForReport(msg);
-                              setReportModalOpen(true);
-                            }}
-                            className="text-[10px] text-slate-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition mt-0.5 flex items-center gap-1"
-                            title="আপত্তিকর মেসেজ রিপোর্ট করুন"
-                          >
-                            <Flag className="h-2.5 w-2.5" />
-                            <span>রিপোর্ট</span>
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Message Input Box */}
-              <form
-                onSubmit={handleSendMessage}
-                className="p-3 border-t border-slate-100 bg-white flex items-center gap-2"
-              >
-                <Input
-                  placeholder="বার্তা লিখুন..."
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  maxLength={2000}
-                  className="flex-1 text-xs h-10 border-slate-200 focus:ring-[#00636b]"
-                />
-                <Button
-                  type="submit"
-                  disabled={!replyText.trim() || sending}
-                  className="h-10 px-4 bg-[#00636b] hover:bg-[#004e54] text-white text-xs gap-1.5 shrink-0"
-                >
-                  {sending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Send className="h-3.5 w-3.5" />
-                      <span>পাঠান</span>
-                    </>
-                  )}
-                </Button>
-              </form>
-            </>
+            <ChatConversationView
+              activeConversation={activeConv}
+              messages={messages}
+              currentUser={currentUser}
+              loadingMessages={loadingMessages}
+              hasMore={hasMore}
+              loadingMore={loadingMore}
+              onLoadMore={() => loadMessages(activeConversationId!, page + 1)}
+              onSendMessage={handleSendMessage}
+              onEditMessage={handleEditMessage}
+              onDeleteMessage={handleDeleteMessage}
+              onDeleteConversation={handleDeleteConversation}
+              onReportMessage={(msg) => {
+                setSelectedMessageForReport(msg);
+                setReportModalOpen(true);
+              }}
+            />
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400 space-y-3">
               <MessageSquare className="h-12 w-12 text-slate-300 stroke-[1.5]" />

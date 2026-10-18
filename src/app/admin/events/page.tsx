@@ -37,6 +37,8 @@ import { addNotification } from "@/store/slices/notificationSlice";
 import { toBanglaNumber, formatBanglaDate } from "@/lib/utils";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { MultiImageUpload } from "@/components/ui/MultiImageUpload";
+import { RichTextEditor } from "@/components/ui/RichTextEditor";
+import { DatePicker } from "@/components/ui/DatePicker";
 
 interface EventItem {
   _id: string;
@@ -449,51 +451,43 @@ export default function EventManagementPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
-                শুরুর তারিখ <span className="text-rose-500">*</span>
-              </label>
-              <Input
-                type="date"
+              <DatePicker
+                label="শুরুর তারিখ"
+                required
                 value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                onChange={(val) => setFormData({ ...formData, startDate: val })}
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
-                সমাপ্তির তারিখ
-              </label>
-              <Input
-                type="date"
+              <DatePicker
+                label="সমাপ্তির তারিখ (ঐচ্ছিক)"
                 value={formData.endDate}
-                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                onChange={(val) => setFormData({ ...formData, endDate: val })}
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">
-              বিস্তারিত বিবরণ <span className="text-rose-500">*</span>
-            </label>
-            <textarea
-              rows={4}
+            <RichTextEditor
+              label="বিস্তারিত বিবরণ"
+              required
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="ইভেন্টের উদ্দেশ্য, প্রধান আলোচক ও সময়সূচী..."
-              className="w-full p-2.5 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-[#00636b] focus:ring-1 focus:ring-[#00636b]"
+              onChange={(html) => setFormData({ ...formData, description: html })}
+              placeholder="ইভেন্টের উদ্দেশ্য, প্রধান আলোচক ও সময়সূচী... লেখার মাঝে ছবি ইনসার্ট করতে পারেন।"
             />
           </div>
 
           {/* Multi Image Upload for Event Gallery / Moments */}
           <div className="pt-2 border-t border-slate-100">
             <MultiImageUpload
-              label="ইভেন্টের ছবি গ্যালারি (একাধিক ছবি আপলোড করতে পারবেন)"
+              label="ইভেন্টের ছবি গ্যালারি (যতখুশি ছবি আপলোড করতে পারবেন)"
               value={formData.images}
               onChange={(urls) => setFormData({ ...formData, images: urls })}
               folder="general"
-              maxFiles={12}
+              maxFiles={100}
               description="অনুষ্ঠানের স্মরণীয় মুহূর্ত, পুরস্কার বিতরণী বা মঞ্চের একাধিক ছবি আপলোড করুন।"
             />
           </div>

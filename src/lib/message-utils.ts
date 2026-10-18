@@ -169,3 +169,85 @@ export function parseSafeMessageText(rawText: string): TextPart[] {
 
   return parts;
 }
+
+/**
+ * Format message time in 12-hour format with AM/PM (e.g., "০৩:৪৫ PM")
+ */
+export function formatMessageTime12h(dateInput: Date | string | number): string {
+  const date = new Date(dateInput);
+  if (isNaN(date.getTime())) return "";
+
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const period = hours >= 12 ? "PM" : "AM";
+  const hour12 = hours % 12 || 12;
+
+  const hourStr = toBanglaNumber(hour12.toString().padStart(2, "0"));
+  const minStr = toBanglaNumber(minutes.toString().padStart(2, "0"));
+
+  return `${hourStr}:${minStr} ${period}`;
+}
+
+/**
+ * Format date group header for chat message history (like Facebook Messenger):
+ * - "আজ" (Today)
+ * - "গতকাল" (Yesterday)
+ * - "১৮ অক্টোবর ২০২৬"
+ */
+export function formatDateGroupHeader(dateInput: Date | string | number): string {
+  const date = new Date(dateInput);
+  if (isNaN(date.getTime())) return "";
+
+  const now = new Date();
+  const isToday =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+
+  if (isToday) return "আজ";
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday =
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear();
+
+  if (isYesterday) return "গতকাল";
+
+  const banglaMonthsFull = [
+    "জানুয়ারি",
+    "ফেব্রুয়ারি",
+    "মার্চ",
+    "এপ্রিল",
+    "মে",
+    "জুন",
+    "জুলাই",
+    "আগস্ট",
+    "সেপ্টেম্বর",
+    "অক্টোবর",
+    "নভেম্বর",
+    "ডিসেম্বর",
+  ];
+
+  const day = toBanglaNumber(date.getDate());
+  const month = banglaMonthsFull[date.getMonth()];
+  const year = toBanglaNumber(date.getFullYear());
+
+  if (date.getFullYear() === now.getFullYear()) {
+    return `${day} ${month}`;
+  }
+
+  return `${day} ${month} ${year}`;
+}
+
+/**
+ * Check if message is within the 1-day (24 hours) edit window
+ */
+export function canEditMessage(createdAt: Date | string | number): boolean {
+  const date = new Date(createdAt);
+  if (isNaN(date.getTime())) return false;
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  return Date.now() - date.getTime() <= oneDayMs;
+}
+

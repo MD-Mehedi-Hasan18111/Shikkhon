@@ -38,6 +38,7 @@ import { useAppDispatch } from "@/store";
 import { addNotification } from "@/store/slices/notificationSlice";
 import { toBanglaNumber, formatBanglaDate } from "@/lib/utils";
 import { MultiImageUpload } from "@/components/ui/MultiImageUpload";
+import { RichTextEditor } from "@/components/ui/RichTextEditor";
 
 interface NoticeItem {
   _id: string;
@@ -493,26 +494,23 @@ export default function NoticeManagementPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">
-              বিস্তারিত নোটিশ বিবরণ <span className="text-rose-500">*</span>
-            </label>
-            <textarea
-              rows={5}
+            <RichTextEditor
+              label="বিস্তারিত নোটিশ বিবরণ"
+              required
               value={formData.content}
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              placeholder="পূর্ণাঙ্গ বিজ্ঞপ্তি ও নির্দেশনা এখানে লিখুন..."
-              className="w-full p-2.5 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-[#00636b] focus:ring-1 focus:ring-[#00636b]"
+              onChange={(html) => setFormData({ ...formData, content: html })}
+              placeholder="পূর্ণাঙ্গ বিজ্ঞপ্তি ও নির্দেশনা এখানে লিখুন... লেখার মাঝে ছবি ইনসার্ট করতে পারেন।"
             />
           </div>
 
           {/* Multi Image Upload for Notice attachments */}
           <div className="pt-2 border-t border-slate-100">
             <MultiImageUpload
-              label="সংযুক্ত নোটিশপত্র বা অফিসিয়াল সার্কুলার ছবি (একাধিক ছবি আপলোড করতে পারবেন)"
+              label="সংযুক্ত নোটিশপত্র বা অফিসিয়াল সার্কুলার ছবি (যতখুশি ছবি আপলোড করতে পারবেন)"
               value={formData.images}
               onChange={(urls) => setFormData({ ...formData, images: urls })}
               folder="general"
-              maxFiles={6}
+              maxFiles={100}
               description="অফিসিয়াল স্বাক্ষরিত নোটিশের স্ক্যান কপি বা রুটিনের ছবি আপলোড করুন।"
             />
           </div>

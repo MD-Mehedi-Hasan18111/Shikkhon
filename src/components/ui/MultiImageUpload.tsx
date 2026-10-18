@@ -21,7 +21,7 @@ export function MultiImageUpload({
   folder = "general",
   label,
   description,
-  maxFiles = 10,
+  maxFiles = 100,
   className,
 }: MultiImageUploadProps) {
   const [uploading, setUploading] = useState(false);
@@ -35,9 +35,9 @@ export function MultiImageUpload({
       throw new Error(`"${file.name}" কোনো ছবি ফাইল নয় (JPG, PNG, WebP দিন)।`);
     }
 
-    // Validate size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      throw new Error(`"${file.name}"-এর আকার ৫MB এর চেয়ে বেশি।`);
+    // Validate size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      throw new Error(`"${file.name}"-এর আকার ১০MB এর চেয়ে বেশি।`);
     }
 
     const formData = new FormData();
@@ -63,7 +63,7 @@ export function MultiImageUpload({
     const fileArray = Array.from(files);
     if (fileArray.length === 0) return;
 
-    if (value.length + fileArray.length > maxFiles) {
+    if (maxFiles && maxFiles > 0 && value.length + fileArray.length > maxFiles) {
       setError(`একসাথে সর্বোচ্চ ${maxFiles}টি ছবি আপলোড করা যাবে।`);
       return;
     }

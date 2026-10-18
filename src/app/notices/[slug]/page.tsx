@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { getNoticeBySlug, getLatestNotices, getSiteSettings } from "@/lib/public-data";
 import { formatBanglaDate } from "@/lib/utils";
+import { ImageGalleryViewer } from "@/components/public/ImageGalleryViewer";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -100,65 +101,79 @@ export default async function NoticeDetailPage({ params }: PageProps) {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Content Area */}
             <div className="lg:col-span-2">
-              <Card className="bg-white border-slate-200 shadow-sm">
-                <CardContent className="p-6 sm:p-8">
-                  {/* Meta badges */}
-                  <div className="flex flex-wrap items-center gap-2.5 mb-4">
-                    {notice.isPinned && (
-                      <Badge className="bg-primary-800 text-white flex items-center gap-1 text-xs">
-                        <Pin className="h-3 w-3" />
-                        <span>পিন করা</span>
+              <Card className="bg-white border-slate-200 shadow-sm overflow-hidden">
+                <ImageGalleryViewer
+                  images={notice.images}
+                  title={notice.title}
+                  showCover={false}
+                  showGallery={true}
+                >
+                  <CardContent className="p-6 sm:p-8">
+                    {/* Meta badges */}
+                    <div className="flex flex-wrap items-center gap-2.5 mb-4">
+                      {notice.isPinned && (
+                        <Badge className="bg-primary-800 text-white flex items-center gap-1 text-xs">
+                          <Pin className="h-3 w-3" />
+                          <span>পিন করা</span>
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className={`text-xs ${pConfig.badgeClass}`}>
+                        {pConfig.label}
                       </Badge>
+                      <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                        <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                        <span>
+                          {formatBanglaDate(notice.publishedAt || notice.createdAt)}
+                        </span>
+                      </span>
+                    </div>
+
+                    {/* Title */}
+                    <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight mb-6">
+                      {notice.title}
+                    </h1>
+
+                    {/* Summary Callout if present */}
+                    {notice.summary && (
+                      <div className="bg-amber-50/70 border-l-4 border-amber-500 p-4 rounded-r-lg mb-8 text-sm text-amber-950 font-medium leading-relaxed">
+                        {notice.summary}
+                      </div>
                     )}
-                    <Badge variant="outline" className={`text-xs ${pConfig.badgeClass}`}>
-                      {pConfig.label}
-                    </Badge>
-                    <span className="flex items-center gap-1.5 text-xs text-slate-500">
-                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                      <span>
-                        {formatBanglaDate(notice.publishedAt || notice.createdAt)}
-                      </span>
-                    </span>
-                  </div>
 
-                  {/* Title */}
-                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight mb-6">
-                    {notice.title}
-                  </h1>
+                    {/* Full Notice Content */}
+                    {/<[a-z][\s\S]*>/i.test(notice.content) ? (
+                      <div
+                        className="prose prose-slate max-w-none text-slate-700 leading-relaxed text-base space-y-4"
+                        dangerouslySetInnerHTML={{ __html: notice.content }}
+                      />
+                    ) : (
+                      <div className="prose prose-slate max-w-none text-slate-700 leading-relaxed text-base whitespace-pre-line space-y-4 font-normal">
+                        {notice.content}
+                      </div>
+                    )}
 
-                  {/* Summary Callout if present */}
-                  {notice.summary && (
-                    <div className="bg-amber-50/70 border-l-4 border-amber-500 p-4 rounded-r-lg mb-8 text-sm text-amber-950 font-medium leading-relaxed">
-                      {notice.summary}
+                    {/* Expiration or Notice Footer */}
+                    <div className="mt-10 pt-6 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs text-slate-500">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-slate-400" />
+                        <span>
+                          কর্তৃপক্ষ:{" "}
+                          {settings.institutionName || "শিক্ষণ একাডেমিক কেয়ার প্রশাসন"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 print:hidden">
+                        <button
+                          onClick={undefined}
+                          className="inline-flex items-center gap-1.5 text-slate-600 hover:text-primary-800 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                        >
+                          <Printer className="h-3.5 w-3.5" />
+                          <span>প্রিন্ট করুন</span>
+                        </button>
+                      </div>
                     </div>
-                  )}
-
-                  {/* Full Notice Content */}
-                  <div className="prose prose-slate max-w-none text-slate-700 leading-relaxed text-base whitespace-pre-line space-y-4 font-normal">
-                    {notice.content}
-                  </div>
-
-                  {/* Expiration or Notice Footer */}
-                  <div className="mt-10 pt-6 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs text-slate-500">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-slate-400" />
-                      <span>
-                        কর্তৃপক্ষ:{" "}
-                        {settings.institutionName || "শিক্ষণ একাডেমিক কেয়ার প্রশাসন"}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 print:hidden">
-                      <button
-                        onClick={undefined}
-                        className="inline-flex items-center gap-1.5 text-slate-600 hover:text-primary-800 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium transition"
-                      >
-                        <Printer className="h-3.5 w-3.5" />
-                        <span>প্রিন্ট করুন</span>
-                      </button>
-                    </div>
-                  </div>
-                </CardContent>
+                  </CardContent>
+                </ImageGalleryViewer>
               </Card>
             </div>
 

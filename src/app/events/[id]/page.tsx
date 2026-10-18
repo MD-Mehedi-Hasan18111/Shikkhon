@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { getEventById, getSiteSettings } from "@/lib/public-data";
 import { formatBanglaDate, toBanglaNumber } from "@/lib/utils";
+import { ImageGalleryViewer } from "@/components/public/ImageGalleryViewer";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -87,74 +88,78 @@ export default async function EventDetailPage({ params }: PageProps) {
             {/* Main Details */}
             <div className="lg:col-span-2">
               <Card className="bg-white border-slate-200 shadow-sm overflow-hidden">
-                {event.coverImage && (
-                  <div className="w-full h-72 sm:h-96 relative bg-slate-100">
-                    <img
-                      src={event.coverImage}
-                      alt={event.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-
-                <CardContent className="p-6 sm:p-8">
-                  <div className="flex flex-wrap items-center gap-2.5 mb-4">
-                    {event.isFeatured && (
-                      <Badge className="bg-amber-500 text-white flex items-center gap-1 text-xs">
-                        <Sparkles className="h-3 w-3" />
-                        <span>বিশেষ ইভেন্ট</span>
+                <ImageGalleryViewer
+                  coverImage={event.coverImage}
+                  images={event.images}
+                  title={event.title}
+                  coverAspect="wide"
+                >
+                  <CardContent className="p-6 sm:p-8">
+                    <div className="flex flex-wrap items-center gap-2.5 mb-4">
+                      {event.isFeatured && (
+                        <Badge className="bg-amber-500 text-white flex items-center gap-1 text-xs">
+                          <Sparkles className="h-3 w-3" />
+                          <span>বিশেষ ইভেন্ট</span>
+                        </Badge>
+                      )}
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${
+                          isPast
+                            ? "bg-slate-100 text-slate-700 border-slate-200"
+                            : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                        }`}
+                      >
+                        {isPast ? "সম্পন্ন হয়েছে" : "আসন্ন ইভেন্ট"}
                       </Badge>
-                    )}
-                    <Badge
-                      variant="outline"
-                      className={`text-xs ${
-                        isPast
-                          ? "bg-slate-100 text-slate-700 border-slate-200"
-                          : "bg-emerald-50 text-emerald-800 border-emerald-200"
-                      }`}
-                    >
-                      {isPast ? "সম্পন্ন হয়েছে" : "আসন্ন ইভেন্ট"}
-                    </Badge>
-                  </div>
+                    </div>
 
-                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight mb-6">
-                    {event.title}
-                  </h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight mb-6">
+                      {event.title}
+                    </h1>
 
-                  {/* Highlights Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200 mb-8">
-                    <div className="flex items-start gap-3">
-                      <Calendar className="h-5 w-5 text-primary-600 shrink-0 mt-0.5" />
-                      <div>
-                        <span className="text-xs text-slate-500 block">তারিখ ও সময়</span>
-                        <span className="text-sm font-semibold text-slate-800">
-                          {formatBanglaDate(event.startDate)}
-                        </span>
-                        {event.endDate && (
-                          <span className="text-xs text-slate-500 block">
-                            সমাপ্তি: {formatBanglaDate(event.endDate)}
+                    {/* Highlights Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200 mb-8">
+                      <div className="flex items-start gap-3">
+                        <Calendar className="h-5 w-5 text-primary-600 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="text-xs text-slate-500 block">তারিখ ও সময়</span>
+                          <span className="text-sm font-semibold text-slate-800">
+                            {formatBanglaDate(event.startDate)}
                           </span>
-                        )}
+                          {event.endDate && (
+                            <span className="text-xs text-slate-500 block">
+                              সমাপ্তি: {formatBanglaDate(event.endDate)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <MapPin className="h-5 w-5 text-primary-600 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="text-xs text-slate-500 block">
+                            অনুষ্ঠানস্থল / ভেন্যু
+                          </span>
+                          <span className="text-sm font-semibold text-slate-800">
+                            {event.venue}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3">
-                      <MapPin className="h-5 w-5 text-primary-600 shrink-0 mt-0.5" />
-                      <div>
-                        <span className="text-xs text-slate-500 block">
-                          অনুষ্ঠানস্থল / ভেন্যু
-                        </span>
-                        <span className="text-sm font-semibold text-slate-800">
-                          {event.venue}
-                        </span>
+                    {/<[a-z][\s\S]*>/i.test(event.description) ? (
+                      <div
+                        className="prose prose-slate max-w-none text-slate-700 leading-relaxed text-base space-y-4"
+                        dangerouslySetInnerHTML={{ __html: event.description }}
+                      />
+                    ) : (
+                      <div className="prose prose-slate max-w-none text-slate-700 leading-relaxed text-base whitespace-pre-line">
+                        {event.description}
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="prose prose-slate max-w-none text-slate-700 leading-relaxed text-base whitespace-pre-line">
-                    {event.description}
-                  </div>
-                </CardContent>
+                    )}
+                  </CardContent>
+                </ImageGalleryViewer>
               </Card>
             </div>
 

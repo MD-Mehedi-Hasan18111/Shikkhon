@@ -8,6 +8,7 @@ import {
   Search,
   ArrowRight,
   Sparkles,
+  Images,
 } from "lucide-react";
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { PublicFooter } from "@/components/layout/PublicFooter";
@@ -163,30 +164,39 @@ export default async function BlogPage({ searchParams }: PageProps) {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-                {posts.map((post: any) => (
-                  <Card
-                    key={post._id}
-                    className="flex flex-col h-full bg-white hover:shadow-lg transition-all duration-300 border-slate-200 overflow-hidden group"
-                  >
-                    {/* Cover image or gradient header */}
-                    <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
-                      {post.coverImage ? (
-                        <img
-                          src={post.coverImage}
-                          alt={post.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-primary-800 via-primary-700 to-primary-900 flex items-center justify-center p-6 text-white text-center">
-                          <BookOpen className="h-12 w-12 text-primary-200/50" />
-                        </div>
-                      )}
-                      {post.tags && post.tags.length > 0 && (
-                        <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-primary-950 font-medium text-xs px-2.5 py-1 rounded-md shadow-xs">
-                          {post.tags[0]}
-                        </span>
-                      )}
-                    </div>
+                {posts.map((post: any) => {
+                  const coverPhoto = post.coverImage || (post.images && post.images[0]) || "";
+                  const totalImages = (post.images?.length || 0) + (post.coverImage && !post.images?.includes(post.coverImage) ? 1 : 0);
+                  return (
+                    <Card
+                      key={post._id}
+                      className="flex flex-col h-full bg-white hover:shadow-lg transition-all duration-300 border-slate-200 overflow-hidden group"
+                    >
+                      {/* Cover image or gradient header */}
+                      <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
+                        {coverPhoto ? (
+                          <img
+                            src={coverPhoto}
+                            alt={post.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-primary-800 via-primary-700 to-primary-900 flex items-center justify-center p-6 text-white text-center">
+                            <BookOpen className="h-12 w-12 text-primary-200/50" />
+                          </div>
+                        )}
+                        {post.tags && post.tags.length > 0 && (
+                          <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-primary-950 font-medium text-xs px-2.5 py-1 rounded-md shadow-xs">
+                            {post.tags[0]}
+                          </span>
+                        )}
+                        {totalImages > 1 && (
+                          <span className="absolute top-3 right-3 bg-black/60 backdrop-blur-xs text-white text-[11px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1">
+                            <Images className="h-3 w-3 text-teal-300" />
+                            <span>{toBanglaNumber(totalImages)}</span>
+                          </span>
+                        )}
+                      </div>
 
                     <CardContent className="flex flex-col flex-1 p-5 sm:p-6 justify-between gap-4">
                       <div>
@@ -236,9 +246,10 @@ export default async function BlogPage({ searchParams }: PageProps) {
                       </div>
                     </CardContent>
                   </Card>
-                ))}
-              </div>
-            )}
+                );
+              })}
+            </div>
+          )}
           </div>
         </section>
       </main>

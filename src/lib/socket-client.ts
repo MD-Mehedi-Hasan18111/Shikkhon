@@ -170,20 +170,31 @@ export function useSocketChat({
 
   // Send message helper with fallback to REST API
   const sendMessage = useCallback(
-    async (text: string) => {
-      if (!conversationId || !text.trim()) return null;
+    async (text: string, imageUrl?: string) => {
+      if (!conversationId || (!text.trim() && !imageUrl)) return null;
 
       const socket = socketRef.current;
       if (socket && socket.connected) {
         return new Promise<any>((resolve, reject) => {
           socket.emit(
             "send_message",
-            { conversationId, text: text.trim() },
+            { conversationId, text: text.trim(), imageUrl },
             (response: { success?: boolean; message?: any; error?: string }) => {
               if (response.success && response.message) {
                 resolve(response.message);
               } else {
-                reject(new Error(response.error || "মেসেজ পাঠানো ব্যর্থ হয়েছে"));
+                // If socket fails, fallback to REST
+                fetch("/api/messages", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ conversationId, text: text.trim(), imageUrl }),
+                })
+                  .then((r) => r.json())
+                  .then((json) => {
+                    if (json.success && json.data) resolve(json.data);
+                    else reject(new Error(response.error || "মেসেজ পাঠানো ব্যর্থ হয়েছে"));
+                  })
+                  .catch(reject);
               }
             }
           );
@@ -194,7 +205,7 @@ export function useSocketChat({
       const res = await fetch("/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId, text: text.trim() }),
+        body: JSON.stringify({ conversationId, text: text.trim(), imageUrl }),
       });
 
       const json = await res.json();

@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/mongodb";
 import { SiteSettings } from "@/models/SiteSettings";
 import { Teacher } from "@/models/Teacher";
@@ -136,13 +137,26 @@ export async function getAllPublishedNotices(search?: string, priority?: string)
 export async function getNoticeBySlug(slug: string) {
   try {
     await connectToDatabase();
+    let decodedSlug = slug;
+    try {
+      decodedSlug = decodeURIComponent(slug);
+    } catch {
+      decodedSlug = slug;
+    }
+
+    const orConditions: any[] = [{ slug: decodedSlug }, { slug }];
+
+    if (mongoose.Types.ObjectId.isValid(slug)) {
+      orConditions.push({ _id: slug });
+    }
+
     const notice = await Notice.findOne({
-      slug,
+      $or: orConditions,
       status: "published",
-      visibility: { $in: ["all", "public"] },
     })
-      .populate("publishedBy", "fullName role")
+      .populate("author", "fullName role")
       .lean();
+
     return notice ? JSON.parse(JSON.stringify(notice)) : null;
   } catch (error) {
     return null;
@@ -207,7 +221,7 @@ export async function getBlogPostBySlug(slug: string) {
     })
       .sort({ publishedAt: -1 })
       .limit(3)
-      .select("title slug coverImage publishedAt")
+      .select("title slug coverImage images publishedAt")
       .lean();
 
     return JSON.parse(JSON.stringify({ post, relatedPosts }));

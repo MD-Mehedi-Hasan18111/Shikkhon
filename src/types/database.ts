@@ -352,6 +352,7 @@ export interface IConversation {
     sentAt: Date;
   };
   status: "active" | "archived";
+  deletedFor?: (Types.ObjectId | string)[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -368,9 +369,15 @@ export interface IMessage {
   conversation: Types.ObjectId | string;
   sender: Types.ObjectId | string;
   text: string;
+  imageUrl?: string;
+  isEdited?: boolean;
+  editedAt?: Date;
+  isDeleted?: boolean;
+  deletedAt?: Date;
   attachments?: IMessageAttachment[];
   readBy: (Types.ObjectId | string)[];
   status: "sent" | "delivered" | "read";
   createdAt: Date;
   updatedAt: Date;
 }
+

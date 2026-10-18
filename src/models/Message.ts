@@ -49,6 +49,24 @@ const MessageSchema = new Schema<IMessageDocument>(
       default: "sent",
       index: true,
     },
+    imageUrl: {
+      type: String,
+      trim: true,
+    },
+    isEdited: {
+      type: Boolean,
+      default: false,
+    },
+    editedAt: {
+      type: Date,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
+    },
   },
   {
     ...defaultSchemaOptions,

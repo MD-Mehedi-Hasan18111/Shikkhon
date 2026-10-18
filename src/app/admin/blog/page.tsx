@@ -36,6 +36,7 @@ import { addNotification } from "@/store/slices/notificationSlice";
 import { toBanglaNumber, formatBanglaDate } from "@/lib/utils";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { MultiImageUpload } from "@/components/ui/MultiImageUpload";
+import { RichTextEditor } from "@/components/ui/RichTextEditor";
 
 interface BlogPostItem {
   _id: string;
@@ -496,26 +497,23 @@ export default function BlogManagementPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">
-              ব্লগের মূল বিষয়বস্তু <span className="text-rose-500">*</span>
-            </label>
-            <textarea
-              rows={6}
+            <RichTextEditor
+              label="ব্লগের মূল বিষয়বস্তু"
+              required
               value={formData.content}
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              placeholder="ব্লগের বিস্তারিত লেখা এখানে লিখুন..."
-              className="w-full p-2.5 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-[#00636b] focus:ring-1 focus:ring-[#00636b]"
+              onChange={(html) => setFormData({ ...formData, content: html })}
+              placeholder="ব্লগের বিস্তারিত লেখা এখানে লিখুন... লেখার মাঝে ছবি ইনসার্ট করতে পারেন।"
             />
           </div>
 
           {/* Multi Image Upload for Blog Gallery / Attachments */}
           <div className="pt-2 border-t border-slate-100">
             <MultiImageUpload
-              label="ব্লগের অতিরিক্ত ছবিসমূহ (একাধিক ছবি আপলোড করতে পারবেন)"
+              label="ব্লগের অতিরিক্ত ছবিসমূহ (যতখুশি ছবি আপলোড করতে পারবেন)"
               value={formData.images}
               onChange={(urls) => setFormData({ ...formData, images: urls })}
               folder="general"
-              maxFiles={8}
+              maxFiles={100}
               description="লেখা বা বিষয়বস্তুর প্রাসঙ্গিক ছবি, ডায়াগ্রাম বা হ্যান্ডনোটের ছবি একসাথে নির্বাচন করুন।"
             />
           </div>

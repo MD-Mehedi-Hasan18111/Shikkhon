@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { getBlogPostBySlug, getSiteSettings } from "@/lib/public-data";
 import { formatBanglaDate, toBanglaNumber } from "@/lib/utils";
+import { ImageGalleryViewer } from "@/components/public/ImageGalleryViewer";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -91,93 +92,97 @@ export default async function BlogPostPage({ params }: PageProps) {
             {/* Main Article */}
             <article className="lg:col-span-2">
               <Card className="bg-white border-slate-200 shadow-sm overflow-hidden">
-                {post.coverImage && (
-                  <div className="w-full h-72 sm:h-96 relative bg-slate-100">
-                    <img
-                      src={post.coverImage}
-                      alt={post.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-
-                <CardContent className="p-6 sm:p-10">
-                  {/* Tags */}
-                  {post.tags && post.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {post.tags.map((t: string, idx: number) => (
-                        <Link key={idx} href={`/blog?tag=${encodeURIComponent(t)}`}>
-                          <Badge
-                            variant="secondary"
-                            className="bg-primary-50 text-primary-800 hover:bg-primary-100 text-xs font-normal"
-                          >
-                            #{t}
-                          </Badge>
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Title */}
-                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 leading-tight mb-4">
-                    {post.title}
-                  </h1>
-
-                  {/* Author & Date metadata bar */}
-                  <div className="flex flex-wrap items-center gap-4 py-3 border-y border-slate-100 text-xs sm:text-sm text-slate-500 mb-6">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-800 flex items-center justify-center font-bold text-xs">
-                        {post.author?.fullName ? post.author.fullName.slice(0, 1) : "লে"}
-                      </div>
-                      <span className="font-medium text-slate-800">
-                        {post.author?.fullName || "শিক্ষক মণ্ডলী"}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="h-4 w-4 text-slate-400" />
-                      <span>{formatBanglaDate(post.publishedAt || post.createdAt)}</span>
-                    </div>
-
-                    {post.viewCount > 0 && (
-                      <div className="flex items-center gap-1.5">
-                        <Eye className="h-4 w-4 text-slate-400" />
-                        <span>{toBanglaNumber(post.viewCount)} বার পড়া হয়েছে</span>
+                <ImageGalleryViewer
+                  coverImage={post.coverImage}
+                  images={post.images}
+                  title={post.title}
+                  coverAspect="wide"
+                >
+                  <CardContent className="p-6 sm:p-10">
+                    {/* Tags */}
+                    {post.tags && post.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {post.tags.map((t: string, idx: number) => (
+                          <Link key={idx} href={`/blog?tag=${encodeURIComponent(t)}`}>
+                            <Badge
+                              variant="secondary"
+                              className="bg-primary-50 text-primary-800 hover:bg-primary-100 text-xs font-normal"
+                            >
+                              #{t}
+                            </Badge>
+                          </Link>
+                        ))}
                       </div>
                     )}
-                  </div>
 
-                  {/* Summary / Lead */}
-                  {post.summary && (
-                    <div className="bg-primary-50/60 border-l-4 border-primary-600 p-4 rounded-r-lg mb-8 text-base text-primary-950 font-medium leading-relaxed">
-                      {post.summary}
-                    </div>
-                  )}
+                    {/* Title */}
+                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 leading-tight mb-4">
+                      {post.title}
+                    </h1>
 
-                  {/* Full Text Content */}
-                  <div className="prose prose-slate max-w-none text-slate-700 leading-relaxed text-base whitespace-pre-line space-y-4">
-                    {post.content}
-                  </div>
+                    {/* Author & Date metadata bar */}
+                    <div className="flex flex-wrap items-center gap-4 py-3 border-y border-slate-100 text-xs sm:text-sm text-slate-500 mb-6">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-800 flex items-center justify-center font-bold text-xs">
+                          {post.author?.fullName ? post.author.fullName.slice(0, 1) : "লে"}
+                        </div>
+                        <span className="font-medium text-slate-800">
+                          {post.author?.fullName || "শিক্ষক মণ্ডলী"}
+                        </span>
+                      </div>
 
-                  {/* Author Footer Card */}
-                  <div className="mt-12 p-6 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center sm:items-start gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-primary-800 text-white flex items-center justify-center font-bold text-xl shadow-xs shrink-0">
-                      {post.author?.fullName ? post.author.fullName.slice(0, 1) : "শি"}
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="h-4 w-4 text-slate-400" />
+                        <span>{formatBanglaDate(post.publishedAt || post.createdAt)}</span>
+                      </div>
+
+                      {post.viewCount > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          <Eye className="h-4 w-4 text-slate-400" />
+                          <span>{toBanglaNumber(post.viewCount)} বার পড়া হয়েছে</span>
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <h4 className="font-bold text-slate-900 text-base">
-                        {post.author?.fullName || "শিক্ষক মণ্ডলী"}
-                      </h4>
-                      <p className="text-xs text-primary-700 font-medium mb-1">
-                        লেখক ও মেন্টর, {settings.institutionName || "শিক্ষণ একাডেমি"}
-                      </p>
-                      <p className="text-xs text-slate-600 leading-relaxed">
-                        শিক্ষার্থীদের নিয়মিত পড়াশোনার অভ্যাস গঠন ও বোর্ড পরীক্ষায়
-                        কাঙ্ক্ষিত ফলাফল অর্জনে দিকনির্দেশনামূলক পরামর্শ দিয়ে থাকেন।
-                      </p>
+
+                    {/* Summary / Lead */}
+                    {post.summary && (
+                      <div className="bg-primary-50/60 border-l-4 border-primary-600 p-4 rounded-r-lg mb-8 text-base text-primary-950 font-medium leading-relaxed">
+                        {post.summary}
+                      </div>
+                    )}
+
+                    {/* Full Text Content */}
+                    {/<[a-z][\s\S]*>/i.test(post.content) ? (
+                      <div
+                        className="prose prose-slate max-w-none text-slate-700 leading-relaxed text-base space-y-4"
+                        dangerouslySetInnerHTML={{ __html: post.content }}
+                      />
+                    ) : (
+                      <div className="prose prose-slate max-w-none text-slate-700 leading-relaxed text-base whitespace-pre-line space-y-4">
+                        {post.content}
+                      </div>
+                    )}
+
+                    {/* Author Footer Card */}
+                    <div className="mt-12 p-6 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-primary-800 text-white flex items-center justify-center font-bold text-xl shadow-xs shrink-0">
+                        {post.author?.fullName ? post.author.fullName.slice(0, 1) : "শি"}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-900 text-base">
+                          {post.author?.fullName || "শিক্ষক মণ্ডলী"}
+                        </h4>
+                        <p className="text-xs text-primary-700 font-medium mb-1">
+                          লেখক ও মেন্টর, {settings.institutionName || "শিক্ষণ একাডেমি"}
+                        </p>
+                        <p className="text-xs text-slate-600 leading-relaxed">
+                          শিক্ষার্থীদের নিয়মিত পড়াশোনার অভ্যাস গঠন ও বোর্ড পরীক্ষায়
+                          কাঙ্ক্ষিত ফলাফল অর্জনে দিকনির্দেশনামূলক পরামর্শ দিয়ে থাকেন।
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
+                  </CardContent>
+                </ImageGalleryViewer>
               </Card>
             </article>
 
@@ -199,9 +204,9 @@ export default async function BlogPostPage({ params }: PageProps) {
                         href={`/blog/${rel.slug}`}
                         className="group flex gap-3 items-start p-2 rounded-lg hover:bg-slate-50 transition"
                       >
-                        {rel.coverImage ? (
+                        {rel.coverImage || (rel.images && rel.images[0]) ? (
                           <img
-                            src={rel.coverImage}
+                            src={rel.coverImage || rel.images[0]}
                             alt={rel.title}
                             className="w-16 h-16 rounded-lg object-cover shrink-0 border border-slate-100"
                           />

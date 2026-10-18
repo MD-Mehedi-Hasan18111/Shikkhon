@@ -8,6 +8,7 @@ import {
   ArrowRight,
   Filter,
   FileText,
+  Images,
 } from "lucide-react";
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { PublicFooter } from "@/components/layout/PublicFooter";
@@ -193,6 +194,8 @@ export default async function NoticesPage({ searchParams }: PageProps) {
                 {notices.map((notice: any) => {
                   const pConfig =
                     priorityLabels[notice.priority] || priorityLabels.normal;
+                  const hasImages = notice.images && notice.images.length > 0;
+
                   return (
                     <Card
                       key={notice._id}
@@ -204,6 +207,23 @@ export default async function NoticesPage({ searchParams }: PageProps) {
                     >
                       <CardContent className="p-5 sm:p-6">
                         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                          {hasImages && (
+                            <Link
+                              href={`/notices/${notice.slug}`}
+                              className="relative shrink-0 w-full sm:w-28 h-28 rounded-lg overflow-hidden border border-slate-200 bg-slate-100 group/img block"
+                            >
+                              <img
+                                src={notice.images[0]}
+                                alt={notice.title}
+                                className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300"
+                              />
+                              <span className="absolute bottom-1.5 right-1.5 bg-black/75 backdrop-blur-xs text-white text-[10px] font-medium px-1.5 py-0.5 rounded flex items-center gap-1 shadow-xs">
+                                <Images className="h-3 w-3" />
+                                <span>{toBanglaNumber(notice.images.length)}</span>
+                              </span>
+                            </Link>
+                          )}
+
                           <div className="space-y-2 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
                               {notice.isPinned && (
@@ -244,7 +264,7 @@ export default async function NoticesPage({ searchParams }: PageProps) {
                             )}
                           </div>
 
-                          <div className="shrink-0 pt-2 sm:pt-0">
+                          <div className="shrink-0 pt-2 sm:pt-0 self-start sm:self-center">
                             <Link href={`/notices/${notice.slug}`}>
                               <Button
                                 variant="outline"

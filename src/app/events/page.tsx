@@ -7,6 +7,7 @@ import {
   ArrowRight,
   CheckCircle2,
   CalendarDays,
+  Images,
 } from "lucide-react";
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { PublicFooter } from "@/components/layout/PublicFooter";
@@ -106,69 +107,80 @@ export default async function EventsPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {upcomingEvents.map((evt: any) => (
-                    <Card
-                      key={evt._id}
-                      className="flex flex-col h-full bg-white hover:shadow-lg transition-all duration-300 border-slate-200 overflow-hidden group"
-                    >
-                      <div className="relative h-44 w-full bg-slate-100 overflow-hidden">
-                        {evt.coverImage ? (
-                          <img
-                            src={evt.coverImage}
-                            alt={evt.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-tr from-primary-800 to-primary-600 flex items-center justify-center text-white">
-                            <Calendar className="h-12 w-12 text-white/50" />
-                          </div>
-                        )}
-                        {evt.isFeatured && (
-                          <span className="absolute top-3 left-3 bg-amber-500 text-white font-bold text-xs px-2.5 py-1 rounded-md shadow-xs flex items-center gap-1">
-                            <Sparkles className="h-3 w-3" />
-                            <span>বিশেষ ইভেন্ট</span>
-                          </span>
-                        )}
-                      </div>
+                  {upcomingEvents.map((evt: any) => {
+                    const coverPhoto = evt.coverImage || (evt.images && evt.images[0]) || "";
+                    const totalImages = (evt.images && evt.images.length > 0) ? evt.images.length : (evt.coverImage ? 1 : 0);
 
-                      <CardContent className="flex flex-col flex-1 p-5 sm:p-6 justify-between gap-4">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-xs text-primary-700 font-medium">
-                            <Clock className="h-3.5 w-3.5" />
-                            <span>{formatBanglaDate(evt.startDate)}</span>
-                          </div>
-
-                          <Link href={`/events/${evt._id}`} className="block">
-                            <h3 className="text-lg font-bold text-slate-900 group-hover:text-primary-700 transition-colors line-clamp-2 leading-snug">
-                              {evt.title}
-                            </h3>
-                          </Link>
-
-                          <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                            <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                            <span className="truncate">{evt.venue}</span>
-                          </div>
-
-                          <p className="text-slate-600 text-sm line-clamp-2 leading-relaxed pt-1">
-                            {evt.description}
-                          </p>
+                    return (
+                      <Card
+                        key={evt._id}
+                        className="flex flex-col h-full bg-white hover:shadow-lg transition-all duration-300 border-slate-200 overflow-hidden group"
+                      >
+                        <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
+                          {coverPhoto ? (
+                            <img
+                              src={coverPhoto}
+                              alt={evt.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-tr from-primary-800 to-primary-600 flex items-center justify-center text-white">
+                              <Calendar className="h-12 w-12 text-white/50" />
+                            </div>
+                          )}
+                          {evt.isFeatured && (
+                            <span className="absolute top-3 left-3 bg-amber-500 text-white font-bold text-xs px-2.5 py-1 rounded-md shadow-xs flex items-center gap-1">
+                              <Sparkles className="h-3 w-3" />
+                              <span>বিশেষ ইভেন্ট</span>
+                            </span>
+                          )}
+                          {totalImages > 1 && (
+                            <span className="absolute bottom-2.5 right-2.5 bg-black/70 backdrop-blur-xs text-white text-[11px] font-medium px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs">
+                              <Images className="h-3 w-3" />
+                              <span>{toBanglaNumber(totalImages)} টি ছবি</span>
+                            </span>
+                          )}
                         </div>
 
-                        <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-auto">
-                          <Link href={`/events/${evt._id}`} className="w-full">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="w-full flex items-center justify-center gap-1.5 group hover:bg-primary-50 hover:text-primary-800"
-                            >
-                              <span>বিস্তারিত ও অংশগ্রহণ</span>
-                              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                            </Button>
-                          </Link>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        <CardContent className="flex flex-col flex-1 p-5 sm:p-6 justify-between gap-4">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-xs text-primary-700 font-medium">
+                              <Clock className="h-3.5 w-3.5" />
+                              <span>{formatBanglaDate(evt.startDate)}</span>
+                            </div>
+
+                            <Link href={`/events/${evt._id}`} className="block">
+                              <h3 className="text-lg font-bold text-slate-900 group-hover:text-primary-700 transition-colors line-clamp-2 leading-snug">
+                                {evt.title}
+                              </h3>
+                            </Link>
+
+                            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                              <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                              <span className="truncate">{evt.venue}</span>
+                            </div>
+
+                            <p className="text-slate-600 text-sm line-clamp-2 leading-relaxed pt-1">
+                              {evt.description}
+                            </p>
+                          </div>
+
+                          <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-auto">
+                            <Link href={`/events/${evt._id}`} className="w-full">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full flex items-center justify-center gap-1.5 group hover:bg-primary-50 hover:text-primary-800"
+                              >
+                                <span>বিস্তারিত ও অংশগ্রহণ</span>
+                                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                              </Button>
+                            </Link>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -186,33 +198,56 @@ export default async function EventsPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {pastEvents.map((evt: any) => (
-                    <Card
-                      key={evt._id}
-                      className="bg-white border-slate-200 opacity-80 hover:opacity-100 transition-opacity"
-                    >
-                      <CardContent className="p-5">
-                        <Badge variant="secondary" className="text-xs mb-2">
-                          সম্পন্ন হয়েছে
-                        </Badge>
-                        <h4 className="text-base font-bold text-slate-800 line-clamp-1 mb-1">
-                          {evt.title}
-                        </h4>
-                        <div className="text-xs text-slate-500 flex items-center gap-1 mb-2">
-                          <Calendar className="h-3 w-3" />
-                          <span>{formatBanglaDate(evt.startDate)}</span>
-                          <span>•</span>
-                          <span>{evt.venue}</span>
-                        </div>
-                        <Link
-                          href={`/events/${evt._id}`}
-                          className="text-xs text-primary-700 hover:underline font-medium"
-                        >
-                          বিস্তারিত বিবরণ দেখুন →
-                        </Link>
-                      </CardContent>
-                    </Card>
-                  ))}
+                  {pastEvents.map((evt: any) => {
+                    const coverPhoto = evt.coverImage || (evt.images && evt.images[0]) || "";
+                    const totalImages = (evt.images && evt.images.length > 0) ? evt.images.length : (evt.coverImage ? 1 : 0);
+
+                    return (
+                      <Card
+                        key={evt._id}
+                        className="bg-white border-slate-200 overflow-hidden hover:shadow-md transition-shadow group flex flex-col"
+                      >
+                        {coverPhoto && (
+                          <div className="relative h-36 w-full bg-slate-100 overflow-hidden">
+                            <img
+                              src={coverPhoto}
+                              alt={evt.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90 group-hover:opacity-100"
+                            />
+                            {totalImages > 1 && (
+                              <span className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-xs text-white text-[10px] font-medium px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs">
+                                <Images className="h-3 w-3" />
+                                <span>{toBanglaNumber(totalImages)}</span>
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        <CardContent className="p-5 flex-1 flex flex-col justify-between">
+                          <div>
+                            <Badge variant="secondary" className="text-xs mb-2">
+                              সম্পন্ন হয়েছে
+                            </Badge>
+                            <h4 className="text-base font-bold text-slate-800 line-clamp-1 mb-1 group-hover:text-primary-700 transition-colors">
+                              {evt.title}
+                            </h4>
+                            <div className="text-xs text-slate-500 flex items-center gap-1 mb-3">
+                              <Calendar className="h-3 w-3" />
+                              <span>{formatBanglaDate(evt.startDate)}</span>
+                              <span>•</span>
+                              <span className="truncate">{evt.venue}</span>
+                            </div>
+                          </div>
+                          <Link
+                            href={`/events/${evt._id}`}
+                            className="text-xs text-primary-700 hover:underline font-medium inline-flex items-center gap-1"
+                          >
+                            <span>বিস্তারিত বিবরণ ও ছবি দেখুন</span>
+                            <span>→</span>
+                          </Link>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               </div>
             )}

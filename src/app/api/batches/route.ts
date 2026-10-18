@@ -11,6 +11,29 @@ import { Teacher } from "@/models/Teacher";
 import { Student } from "@/models/Student";
 import { Enrollment } from "@/models/Enrollment";
 
+const timeFormatSchema = z.string().transform((val, ctx) => {
+  const trimmed = val.trim();
+  // 24-hour format: "16:00", "04:30"
+  if (/^([01]\d|2[0-3]):([0-5]\d)$/.test(trimmed)) {
+    return trimmed;
+  }
+  // 12-hour format: "04:00 PM", "4:30 AM", "04:00PM", etc.
+  const match = trimmed.match(/^(0?[1-9]|1[0-2]):([0-5]\d)\s*(AM|PM)$/i);
+  if (match) {
+    let h = parseInt(match[1], 10);
+    const m = match[2];
+    const p = match[3].toUpperCase();
+    if (p === "PM" && h < 12) h += 12;
+    if (p === "AM" && h === 12) h = 0;
+    return `${h.toString().padStart(2, "0")}:${m}`;
+  }
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    message: "সময় সঠিক ফরম্যাটে দিন (যেমন: 04:00 PM বা 16:00)",
+  });
+  return z.NEVER;
+});
+
 const scheduleItemSchema = z.object({
   day: z.enum([
     "saturday",
@@ -21,12 +44,8 @@ const scheduleItemSchema = z.object({
     "thursday",
     "friday",
   ]),
-  startTime: z
-    .string()
-    .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "সময় HH:MM ফরম্যাটে দিন (যেমন: 16:00)"),
-  endTime: z
-    .string()
-    .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "সময় HH:MM ফরম্যাটে দিন (যেমন: 17:30)"),
+  startTime: timeFormatSchema,
+  endTime: timeFormatSchema,
   roomNo: z.string().optional(),
 });
 

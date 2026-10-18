@@ -21,13 +21,19 @@ const ScheduleItemSchema = new Schema(
     },
     startTime: {
       type: String,
-      required: true, // e.g. "16:00"
-      match: [/^([01]\d|2[0-3]):([0-5]\d)$/, "সময় HH:MM ফরম্যাটে দিন (যেমন: 16:00)"],
+      required: true, // e.g. "16:00" or "04:00 PM"
+      match: [
+        /^(([01]\d|2[0-3]):([0-5]\d)|(0?[1-9]|1[0-2]):[0-5]\d\s*(AM|PM))$/i,
+        "সময় সঠিক ফরম্যাটে দিন (যেমন: 04:00 PM বা 16:00)",
+      ],
     },
     endTime: {
       type: String,
-      required: true, // e.g. "17:30"
-      match: [/^([01]\d|2[0-3]):([0-5]\d)$/, "সময় HH:MM ফরম্যাটে দিন (যেমন: 17:30)"],
+      required: true, // e.g. "17:30" or "05:30 PM"
+      match: [
+        /^(([01]\d|2[0-3]):([0-5]\d)|(0?[1-9]|1[0-2]):[0-5]\d\s*(AM|PM))$/i,
+        "সময় সঠিক ফরম্যাটে দিন (যেমন: 05:30 PM বা 17:30)",
+      ],
     },
     roomNo: {
       type: String,

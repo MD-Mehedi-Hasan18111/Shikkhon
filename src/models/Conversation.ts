@@ -39,6 +39,12 @@ const ConversationSchema = new Schema<IConversationDocument>(
       default: "active",
       index: true,
     },
+    deletedFor: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
   },
   {
     ...defaultSchemaOptions,

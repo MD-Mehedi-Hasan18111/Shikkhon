@@ -39,6 +39,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { useAppDispatch } from "@/store";
 import { addNotification } from "@/store/slices/notificationSlice";
 import { toBanglaNumber, formatBanglaCurrency } from "@/lib/utils";
+import { TimePicker12h, formatTo12h } from "@/components/ui/TimePicker12h";
 
 interface ScheduleItem {
   day: string;
@@ -156,9 +157,9 @@ export default function BatchManagementPage() {
     monthlyFee: 1500,
     assignedTeachers: [] as string[],
     schedule: [
-      { day: "saturday", startTime: "16:00", endTime: "17:30", roomNo: "কক্ষ-০১" },
-      { day: "monday", startTime: "16:00", endTime: "17:30", roomNo: "কক্ষ-০১" },
-      { day: "wednesday", startTime: "16:00", endTime: "17:30", roomNo: "কক্ষ-০১" },
+      { day: "saturday", startTime: "04:00 PM", endTime: "05:30 PM", roomNo: "কক্ষ-০১" },
+      { day: "monday", startTime: "04:00 PM", endTime: "05:30 PM", roomNo: "কক্ষ-০১" },
+      { day: "wednesday", startTime: "04:00 PM", endTime: "05:30 PM", roomNo: "কক্ষ-০১" },
     ],
   });
   const [formSubmitting, setFormSubmitting] = useState(false);
@@ -256,11 +257,11 @@ export default function BatchManagementPage() {
       schedule: batch.schedule?.length
         ? batch.schedule.map((s) => ({
             day: s.day,
-            startTime: s.startTime,
-            endTime: s.endTime,
+            startTime: formatTo12h(s.startTime) || "04:00 PM",
+            endTime: formatTo12h(s.endTime) || "05:30 PM",
             roomNo: s.roomNo || "",
           }))
-        : [{ day: "saturday", startTime: "16:00", endTime: "17:30", roomNo: "কক্ষ-০১" }],
+        : [{ day: "saturday", startTime: "04:00 PM", endTime: "05:30 PM", roomNo: "কক্ষ-০১" }],
     });
     setEditDialogOpen(true);
   };
@@ -653,9 +654,33 @@ export default function BatchManagementPage() {
           setEditDialogOpen(false);
         }}
         title={editDialogOpen ? "ব্যাচ তথ্য সম্পাদন" : "নতুন ব্যাচ ও সময়সূচী নির্ধারণ"}
-        size="lg"
+        size="xl"
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCreateDialogOpen(false);
+                setEditDialogOpen(false);
+              }}
+            >
+              বাতিল
+            </Button>
+            <Button
+              onClick={() => handleSaveBatch(editDialogOpen)}
+              disabled={formSubmitting}
+              className="bg-[#00636b] hover:bg-[#004f55] text-white shadow-xs"
+            >
+              {formSubmitting
+                ? "সংরক্ষণ হচ্ছে..."
+                : editDialogOpen
+                  ? "আপডেট করুন"
+                  : "ব্যাচ তৈরি করুন"}
+            </Button>
+          </>
+        }
       >
-        <div className="space-y-4 py-2 max-h-[70vh] overflow-y-auto px-1">
+        <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
@@ -816,21 +841,19 @@ export default function BatchManagementPage() {
                     />
                   </div>
                   <div className="col-span-3">
-                    <Input
-                      type="text"
-                      placeholder="16:00"
+                    <TimePicker12h
+                      placeholder="04:00 PM"
                       value={row.startTime}
-                      onChange={(e) =>
-                        updateScheduleItem(idx, "startTime", e.target.value)
+                      onChange={(val) =>
+                        updateScheduleItem(idx, "startTime", val)
                       }
                     />
                   </div>
                   <div className="col-span-3">
-                    <Input
-                      type="text"
-                      placeholder="17:30"
+                    <TimePicker12h
+                      placeholder="05:30 PM"
                       value={row.endTime}
-                      onChange={(e) => updateScheduleItem(idx, "endTime", e.target.value)}
+                      onChange={(val) => updateScheduleItem(idx, "endTime", val)}
                     />
                   </div>
                   <div className="col-span-2 text-right">
@@ -849,28 +872,6 @@ export default function BatchManagementPage() {
           </div>
         </div>
 
-        <div className="pt-4 border-t border-slate-200 flex justify-end gap-2 mt-4">
-          <Button
-            variant="outline"
-            onClick={() => {
-              setCreateDialogOpen(false);
-              setEditDialogOpen(false);
-            }}
-          >
-            বাতিল
-          </Button>
-          <Button
-            onClick={() => handleSaveBatch(editDialogOpen)}
-            disabled={formSubmitting}
-            className="bg-[#00636b] hover:bg-[#004f55] text-white"
-          >
-            {formSubmitting
-              ? "সংরক্ষণ হচ্ছে..."
-              : editDialogOpen
-                ? "আপডেট করুন"
-                : "খুলুন"}
-          </Button>
-        </div>
       </Dialog>
 
       {/* DIALOG 2: Batch Details & Live Capacity View */}
@@ -955,8 +956,8 @@ export default function BatchManagementPage() {
                       <span className="font-medium text-slate-800">
                         {daysBangla[item.day] || item.day}
                       </span>
-                      <span className="font-mono text-slate-600">
-                        {item.startTime} - {item.endTime} (কক্ষ: {item.roomNo || "১"})
+                      <span className="font-mono text-slate-600 font-semibold">
+                        {formatTo12h(item.startTime)} - {formatTo12h(item.endTime)} (কক্ষ: {item.roomNo || "১"})
                       </span>
                     </div>
                   ))}
