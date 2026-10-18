@@ -1,0 +1,209 @@
+import { NextRequest } from "next/server";
+import { z } from "zod";
+import { createApiHandler } from "@/lib/api-handler";
+import { apiSuccess } from "@/lib/api-response";
+import { AppError } from "@/lib/api-error";
+import {
+  getAuthenticatedUser,
+  requireRole,
+  requireStudentOwnership,
+  verifyCsrfProtection,
+} from "@/lib/rbac";
+import { Student } from "@/models/Student";
+import { User } from "@/models/User";
+import { Enrollment } from "@/models/Enrollment";
+import { Attendance } from "@/models/Attendance";
+import { Result } from "@/models/Result";
+
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
+
+export const GET = createApiHandler(
+  async (req: NextRequest, context: unknown) => {
+    const { params } = context as RouteParams;
+    const { id } = await params;
+
+    const session = await getAuthenticatedUser(req);
+    await requireStudentOwnership(session, id);
+
+    const student = await Student.findById(id).lean();
+    if (!student) {
+      throw AppError.notFound(
+        "Student not found",
+        "শিক্ষার্থীর রেকর্ডটি খুঁজে পাওয়া যায়নি।"
+      );
+    }
+
+    const [enrollments, attendanceStats, recentResults] = await Promise.all([
+      Enrollment.find({ student: id })
+        .populate("batch", "name code classLevel monthlyFee")
+        .populate("academicSession", "name code")
+        .lean(),
+      Attendance.aggregate([
+        { $match: { student: student._id } },
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+      ]),
+      Result.find({ student: id })
+        .populate("exam", "title subject maximumMarks examDate")
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .lean(),
+    ]);
+
+    return apiSuccess(
+      { student, enrollments, attendanceStats, recentResults },
+      "শিক্ষার্থীর বিস্তারিত তথ্য পাওয়া গেছে।"
+    );
+  },
+  { requireDb: true }
+);
+
+const updateStudentSchema = z.object({
+  fullName: z.string().min(2).optional(),
+  phone: z.string().optional(),
+  password: z.string().min(6, "পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে").optional(),
+  email: z.string().optional(),
+  institutionName: z.string().optional(),
+  classLevel: z
+    .enum([
+      "class_6",
+      "class_7",
+      "class_8",
+      "class_9",
+      "class_10",
+      "hsc_1st",
+      "hsc_2nd",
+      "alim_1st",
+      "alim_2nd",
+      "admission",
+    ])
+    .optional(),
+  academicGroup: z
+    .enum(["science", "humanities", "business_studies", "general"])
+    .optional(),
+  bloodGroup: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
+  gender: z.enum(["male", "female", "other"]).optional(),
+  guardian: z
+    .object({
+      name: z.string().optional(),
+      phone: z.string().optional(),
+      relation: z.string().optional(),
+      occupation: z.string().optional(),
+    })
+    .optional(),
+  address: z
+    .object({
+      present: z.string().optional(),
+      permanent: z.string().optional(),
+    })
+    .optional(),
+  status: z.enum(["active", "inactive", "graduated", "suspended"]).optional(),
+  notes: z.string().optional(),
+  avatarUrl: z.string().optional(),
+});
+
+export const PATCH = createApiHandler(
+  async (req: NextRequest, context: unknown) => {
+    verifyCsrfProtection(req);
+    const { params } = context as RouteParams;
+    const { id } = await params;
+
+    const session = await getAuthenticatedUser(req);
+    requireRole(session, ["super_admin", "admin"]);
+
+    const body = await req.json();
+    const validated = updateStudentSchema.parse(body);
+
+    const updatePayload: Record<string, unknown> = { ...validated };
+    delete updatePayload.password;
+
+    const updatedStudent = await Student.findByIdAndUpdate(
+      id,
+      { $set: updatePayload },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedStudent) {
+      throw AppError.notFound(
+        "Student not found",
+        "শিক্ষার্থী রেকর্ড খুঁজে পাওয়া যায়নি।"
+      );
+    }
+
+    // Handle student user account, avatar and password update
+    if (validated.password || validated.avatarUrl) {
+      let user = updatedStudent.userId
+        ? await User.findById(updatedStudent.userId)
+        : await User.findOne({ phone: updatedStudent.phone });
+
+      if (user) {
+        if (validated.password) user.password = validated.password;
+        if (validated.avatarUrl) user.avatarUrl = validated.avatarUrl;
+        await user.save();
+        if (!updatedStudent.userId) {
+          updatedStudent.userId = user._id;
+          await updatedStudent.save();
+        }
+      } else {
+        user = await User.create({
+          phone: updatedStudent.phone,
+          fullName: updatedStudent.fullName,
+          password: validated.password || "123456",
+          email: updatedStudent.email || undefined,
+          avatarUrl: validated.avatarUrl || undefined,
+          role: "student",
+          isActive: true,
+        });
+        updatedStudent.userId = user._id;
+        await updatedStudent.save();
+      }
+    }
+
+    return apiSuccess(updatedStudent, "শিক্ষার্থীর তথ্য সফলভাবে আপডেট করা হয়েছে।");
+  },
+  { requireDb: true }
+);
+
+export const DELETE = createApiHandler(
+  async (req: NextRequest, context: unknown) => {
+    verifyCsrfProtection(req);
+    const { params } = context as RouteParams;
+    const { id } = await params;
+
+    // Only Super Admin can deactivate or delete student records
+    const session = await getAuthenticatedUser(req);
+    requireRole(session, ["super_admin"]);
+
+    const forceDelete = req.nextUrl.searchParams.get("force") === "true";
+    const student = await Student.findById(id);
+
+    if (!student) {
+      throw AppError.notFound("Student not found", "শিক্ষার্থী পাওয়া যায়নি।");
+    }
+
+    if (!forceDelete) {
+      // Academic history preservation: deactivate rather than hard delete
+      student.status = "inactive";
+      await student.save();
+      return apiSuccess(
+        student,
+        "শিক্ষার্থীর রেকর্ডটি সফলভাবে নিষ্ক্রিয় ও আর্কাইভ করা হয়েছে (অ্যাকাডেমিক ইতিহাস সংরক্ষিত রয়েছে)।"
+      );
+    }
+
+    // Force hard deletion if explicitly instructed
+    await Promise.all([
+      Student.findByIdAndDelete(id),
+      Enrollment.deleteMany({ student: id }),
+      Attendance.deleteMany({ student: id }),
+      Result.deleteMany({ student: id }),
+    ]);
+
+    return apiSuccess(
+      null,
+      "শিক্ষার্থীর রেকর্ড ও সংশ্লিষ্ট ডেটা স্থায়ীভাবে মুছে ফেলা হয়েছে।"
+    );
+  },
+  { requireDb: true }
+);

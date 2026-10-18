@@ -1,0 +1,172 @@
+@import "tailwindcss";
+
+:root {
+  /* Strictly fixed light theme palette based on Shikkhon Academic Care brand */
+  color-scheme: light only !important;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+
+  /* Primary Teal Scale (50 to 950) */
+  --color-primary-50: #eff8f9;
+  --color-primary-100: #d7eef1;
+  --color-primary-200: #b0dfe5;
+  --color-primary-300: #7dc8d3;
+  --color-primary-400: #3eaebd;
+  --color-primary-500: #007a85;
+  --color-primary-600: #00636b;
+  --color-primary-700: #004f56;
+  --color-primary-800: #003e44;
+  --color-primary-900: #002e33;
+  --color-primary-950: #001e22;
+
+  /* Brand Teal */
+  --brand-teal-50: #eff8f9;
+  --brand-teal-100: #d7eef1;
+  --brand-teal-500: #007a85;
+  --brand-teal-600: #00636b;
+  --brand-teal-700: #004f56;
+  --brand-teal-800: #003e44;
+  --brand-teal-900: #002e33;
+
+  /* Brand Warm Gold / Ochre */
+  --brand-gold-50: #fef9ee;
+  --brand-gold-500: #c27a29;
+  --brand-gold-600: #aa651d;
+  --brand-gold-700: #8c4e16;
+
+  /* Brand Crimson */
+  --brand-crimson-50: #fdf2f2;
+  --brand-crimson-500: #c22126;
+  --brand-crimson-600: #a9171b;
+
+  /* Brand Lime Green */
+  --brand-lime-50: #f7fee7;
+  --brand-lime-600: #65a30d;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans:
+    var(--font-hind-siliguri), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+
+  /* Primary Palette Mapping for Tailwind v4 */
+  --color-primary-50: var(--color-primary-50);
+  --color-primary-100: var(--color-primary-100);
+  --color-primary-200: var(--color-primary-200);
+  --color-primary-300: var(--color-primary-300);
+  --color-primary-400: var(--color-primary-400);
+  --color-primary-500: var(--color-primary-500);
+  --color-primary-600: var(--color-primary-600);
+  --color-primary-700: var(--color-primary-700);
+  --color-primary-800: var(--color-primary-800);
+  --color-primary-900: var(--color-primary-900);
+  --color-primary-950: var(--color-primary-950);
+
+  --color-teal-50: var(--brand-teal-50);
+  --color-teal-100: var(--brand-teal-100);
+  --color-teal-500: var(--brand-teal-500);
+  --color-teal-600: var(--brand-teal-600);
+  --color-teal-700: var(--brand-teal-700);
+  --color-teal-800: var(--brand-teal-800);
+  --color-teal-900: var(--brand-teal-900);
+}
+
+/* Strict color scheme: Ensure OS dark mode never alters text, card, or button contrast */
+html {
+  color-scheme: light only !important;
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+body {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-color-scheme: dark) {
+  html,
+  body {
+    color-scheme: light only !important;
+    background-color: #f8fafc !important;
+    color: #0f172a !important;
+  }
+}
+
+/* Guaranteed Brand Banner Styling: 100% solid, immutable background and text */
+.bg-brand-banner {
+  background-color: #002e33 !important;
+  background-image: linear-gradient(
+    180deg,
+    #001e22 0%,
+    #002e33 50%,
+    #003e44 100%
+  ) !important;
+  color: #ffffff !important;
+}
+
+/* Guaranteed Brand Dark Card Styling */
+.bg-brand-card-dark {
+  background-color: #002e33 !important;
+  background-image: linear-gradient(135deg, #002e33 0%, #001e22 100%) !important;
+  color: #ffffff !important;
+  border-color: #004f56 !important;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Professional Modern Animations for Homepage */
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes pulseSubtle {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.92;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes shimmerGlow {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-float-slow {
+  animation: floatSlow 5s ease-in-out infinite;
+}
+
+.animate-pulse-subtle {
+  animation: pulseSubtle 3s ease-in-out infinite;
+}
+
