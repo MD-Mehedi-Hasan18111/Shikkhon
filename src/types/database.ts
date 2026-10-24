@@ -300,6 +300,8 @@ export interface ISiteSettings {
     facebook?: string;
     youtube?: string;
     instagram?: string;
+    linkedin?: string;
+    twitter?: string;
   };
   whatsAppNumber?: string;
   whatsAppPrefillMessage?: string;

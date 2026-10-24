@@ -53,10 +53,12 @@ const SiteSettingsSchema = new Schema<ISiteSettingsDocument>(
       facebook: { type: String, default: "" },
       youtube: { type: String, default: "" },
       instagram: { type: String, default: "" },
+      linkedin: { type: String, default: "" },
+      twitter: { type: String, default: "" },
     },
     whatsAppNumber: {
       type: String,
-      default: "+880 1866-098078",
+      default: "+8801859787399",
     },
     whatsAppPrefillMessage: {
       type: String,

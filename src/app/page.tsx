@@ -39,6 +39,7 @@ import {
   getUpcomingEvents,
   getActiveBatchesWithDetails,
 } from "@/lib/public-data";
+import { generateWhatsAppLink, DEFAULT_WHATSAPP_GENERAL_MESSAGE } from "@/lib/whatsapp";
 
 export const revalidate = 60; // ISR Revalidate every 60 seconds
 
@@ -138,7 +139,7 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
-      <PublicHeader />
+      <PublicHeader settings={settings} />
 
       <main className="flex-1">
         {/* Admission Alert Ribbon (if admission is open) */}
@@ -244,7 +245,12 @@ export default async function HomePage() {
                 </div>
                 {settings.whatsAppNumber && (
                   <a
-                    href={`https://wa.me/${settings.whatsAppNumber.replace(/[^0-9]/g, "")}`}
+                    href={generateWhatsAppLink({
+                      phone: settings.whatsAppNumber,
+                      message:
+                        settings.whatsAppPrefillMessage ||
+                        DEFAULT_WHATSAPP_GENERAL_MESSAGE,
+                    })}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition shadow-2xs hover:scale-105"
@@ -520,7 +526,7 @@ export default async function HomePage() {
         </section>
       </main>
 
-      <PublicFooter />
+      <PublicFooter settings={settings} />
     </div>
   );
 }

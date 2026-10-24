@@ -69,7 +69,7 @@ export const DEFAULT_WHATSAPP_ADMISSION_MESSAGE =
   "আসসালামু আলাইকুম, আমি কোচিং এ ভর্তির ব্যাপারে তথ্য জানতে চাচ্ছি।";
 
 export const DEFAULT_WHATSAPP_GENERAL_MESSAGE =
-  "আসসালামু আলাইকুম, আমি শিক্ষণ একাডেমিক কেয়ার সম্পর্কে জানতে আগ্রহী।";
+  "আসসালামু আলাইকুম, আমি কোচিং এ ভর্তির ব্যাপারে তথ্য জানতে চাচ্ছি।";
 
 /**
  * Generates an official wa.me click-to-chat URL.

@@ -29,8 +29,8 @@ const defaultSiteSettings = {
   contactPhone: "০১৯৮-২৭০৫৬৪৬",
   contactEmail: "info@shikkhon.edu.bd",
   address: "এস ক্লাব মোড় (এর পশ্চিম পার্শ্বে), রোড-০২, বি-ব্লক, হালিশহর, চট্টগ্রাম",
-  whatsappNumber: "+880 1866-098078",
-  whatsAppNumber: "+880 1866-098078",
+  whatsappNumber: "+8801859787399",
+  whatsAppNumber: "+8801859787399",
   whatsAppPrefillMessage:
     "আসসালামু আলাইকুম, আমি কোচিং এ ভর্তির ব্যাপারে তথ্য জানতে চাচ্ছি।",
   isWhatsAppEnabled: true,

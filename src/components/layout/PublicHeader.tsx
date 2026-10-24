@@ -20,6 +20,7 @@ import { bn } from "@/config/bangla-strings";
 import { cn } from "@/lib/utils";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { setCredentials, logout } from "@/store/slices/authSlice";
+import { SocialMediaLinks } from "@/components/public/SocialMediaLinks";
 
 interface PublicHeaderProps {
   settings?: any;
@@ -28,10 +29,35 @@ interface PublicHeaderProps {
 export function PublicHeader({ settings }: PublicHeaderProps = {}) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasTokenCookie, setHasTokenCookie] = useState(false);
+  const [liveSettings, setLiveSettings] = useState(settings);
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useAppDispatch();
   const auth = useAppSelector((state) => state.auth);
+
+  // Sync when prop changes
+  useEffect(() => {
+    if (settings) {
+      setLiveSettings(settings);
+    }
+  }, [settings]);
+
+  // Sync on admin update event
+  useEffect(() => {
+    const fetchLatest = () => {
+      fetch("/api/site-settings", { cache: "no-store" })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((json) => {
+          if (json?.data) {
+            setLiveSettings(json.data);
+          }
+        })
+        .catch(() => {});
+    };
+
+    window.addEventListener("site-settings-updated", fetchLatest);
+    return () => window.removeEventListener("site-settings-updated", fetchLatest);
+  }, []);
 
   // Check auth session on mount to detect logged in user
   useEffect(() => {
@@ -71,10 +97,12 @@ export function PublicHeader({ settings }: PublicHeaderProps = {}) {
     }
   }, [auth.isAuthenticated, auth.user, dispatch]);
 
-  const institutionName = settings?.institutionName || bn.institution.name;
-  const institutionMotto = settings?.motto || bn.institution.motto;
-  const institutionAddress = settings?.address || bn.institution.address;
-  const contactPhone = settings?.contactPhone || bn.institution.phones[0];
+  const activeSettings = liveSettings || settings;
+  const institutionName = activeSettings?.institutionName || bn.institution.name;
+  const institutionMotto = activeSettings?.motto || bn.institution.motto;
+  const institutionAddress = activeSettings?.address || bn.institution.address;
+  const contactPhone = activeSettings?.contactPhone || activeSettings?.phones?.[0] || bn.institution.phones[0];
+  const socialLinks = activeSettings?.socialLinks || {};
 
   const currentUser = auth.user;
   const isLoggedIn = !!currentUser || hasTokenCookie;
@@ -146,11 +174,14 @@ export function PublicHeader({ settings }: PublicHeaderProps = {}) {
             </span>
           </div>
 
-          {/* Hotline Phone */}
-          <div className="flex items-center gap-3">
+          {/* Top Bar Right: Social Media Icons & Hotline Phone */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <SocialMediaLinks socialLinks={socialLinks} variant="topbar" />
+
             <a
-              href={`tel:${contactPhone}`}
-              className="inline-flex items-center gap-1 text-[#f7fee7] bg-[#65a30d]/80 hover:bg-[#65a30d] px-2 py-0.5 rounded text-[11px] font-semibold transition"
+              href={`tel:${contactPhone.replace(/[^0-9]/g, "")}`}
+              className="inline-flex items-center gap-1 text-[#f7fee7] bg-[#65a30d]/85 hover:bg-[#65a30d] px-2.5 py-0.5 rounded-md text-[11px] font-semibold transition shadow-2xs hover:shadow-xs"
+              title={`হটলাইন: ${contactPhone}`}
             >
               <PhoneCall className="h-3 w-3" />
               <span>{contactPhone}</span>
@@ -343,6 +374,13 @@ export function PublicHeader({ settings }: PublicHeaderProps = {}) {
                   {bn.publicNav.login}
                 </Button>
               </Link>
+            )}
+
+            {socialLinks && Object.values(socialLinks).some(Boolean) && (
+              <div className="pt-2 flex items-center justify-between border-t border-slate-100">
+                <span className="text-[11px] font-medium text-slate-500">সোশ্যাল মিডিয়া:</span>
+                <SocialMediaLinks socialLinks={socialLinks} variant="topbar" className="text-slate-600" />
+              </div>
             )}
           </div>
         </div>

@@ -19,6 +19,8 @@ const updateSiteSettingsSchema = z.object({
       facebook: z.string().optional(),
       youtube: z.string().optional(),
       instagram: z.string().optional(),
+      linkedin: z.string().optional(),
+      twitter: z.string().optional(),
     })
     .optional(),
   whatsAppNumber: z.string().optional(),
@@ -64,10 +66,16 @@ export const PUT = createApiHandler(
 
     try {
       const { revalidatePath } = await import("next/cache");
+      revalidatePath("/", "layout");
       revalidatePath("/");
       revalidatePath("/about");
       revalidatePath("/contact");
       revalidatePath("/admissions");
+      revalidatePath("/classes");
+      revalidatePath("/teachers");
+      revalidatePath("/events");
+      revalidatePath("/notices");
+      revalidatePath("/blog");
     } catch {
       // Ignore if revalidatePath fails in non-server action context
     }

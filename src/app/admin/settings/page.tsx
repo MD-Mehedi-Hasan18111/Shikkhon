@@ -46,6 +46,8 @@ interface SiteSettingsData {
     facebook?: string;
     youtube?: string;
     instagram?: string;
+    linkedin?: string;
+    twitter?: string;
   };
 }
 
@@ -64,7 +66,7 @@ export default function SiteSettingsManagementPage() {
     phones: ["০১৯৮-২৭০৫৬৪৬", "০১৮৫৯-৭৮৭৩৯৯"],
     email: "info@shikkhon.edu.bd",
     address: "এস ক্লাব মোড় (এর পশ্চিম পার্শ্বে), রোড-০২, বি-ব্লক, হালিশহর, চট্টগ্রাম",
-    whatsAppNumber: "+880 1866-098078",
+    whatsAppNumber: "+8801859787399",
     whatsAppPrefillMessage:
       "আসসালামু আলাইকুম, আমি কোচিং এ ভর্তির ব্যাপারে তথ্য জানতে চাচ্ছি।",
     isWhatsAppEnabled: true,
@@ -167,6 +169,10 @@ export default function SiteSettingsManagementPage() {
           message: "ওয়েবসাইট ও প্রতিষ্ঠানের কনফিগারেশন সফলভাবে আপডেট হয়েছে।",
         })
       );
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("site-settings-updated"));
+      }
     } catch (err: unknown) {
       dispatch(
         addNotification({
@@ -337,7 +343,7 @@ export default function SiteSettingsManagementPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, whatsAppNumber: e.target.value })
                     }
-                    placeholder="+880 1866-098078"
+                    placeholder="+8801859787399"
                   />
                 </div>
 
@@ -607,6 +613,44 @@ export default function SiteSettingsManagementPage() {
                       })
                     }
                     placeholder="https://instagram.com/..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">
+                    লিঙ্কডইন (LinkedIn)
+                  </label>
+                  <Input
+                    value={formData.socialLinks.linkedin || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        socialLinks: {
+                          ...formData.socialLinks,
+                          linkedin: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="https://linkedin.com/in/..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">
+                    এক্স / টুইটার (X)
+                  </label>
+                  <Input
+                    value={formData.socialLinks.twitter || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        socialLinks: {
+                          ...formData.socialLinks,
+                          twitter: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="https://x.com/..."
                   />
                 </div>
               </div>

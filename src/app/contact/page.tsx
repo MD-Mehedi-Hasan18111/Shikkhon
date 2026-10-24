@@ -30,7 +30,7 @@ export default async function ContactPage() {
   const settings = await getSiteSettings();
 
   const whatsAppPhone =
-    settings.whatsAppNumber || settings.whatsappNumber || "+880 1866-098078";
+    settings.whatsAppNumber || settings.whatsappNumber || "+8801859787399";
   const whatsAppLink = generateWhatsAppLink({
     phone: whatsAppPhone,
     message:

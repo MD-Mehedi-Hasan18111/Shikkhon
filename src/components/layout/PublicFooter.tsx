@@ -1,8 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
-import { PhoneCall, MapPin, Mail, ChevronRight, ShieldCheck, Heart } from "lucide-react";
+import { PhoneCall, MapPin, Mail, ChevronRight, ShieldCheck, Heart, MessageCircle } from "lucide-react";
 import { bn } from "@/config/bangla-strings";
 import { FloatingWhatsAppButton } from "@/components/public/FloatingWhatsAppButton";
+import { generateWhatsAppLink, DEFAULT_WHATSAPP_GENERAL_MESSAGE } from "@/lib/whatsapp";
+import { SocialMediaLinks } from "@/components/public/SocialMediaLinks";
 
 interface PublicFooterProps {
   settings?: any;
@@ -12,9 +14,10 @@ export function PublicFooter({ settings }: PublicFooterProps = {}) {
   const institutionName = settings?.institutionName || bn.institution.name;
   const institutionMotto = settings?.motto || bn.institution.motto;
   const institutionAddress = settings?.address || bn.institution.address;
-  const contactPhone = settings?.contactPhone || bn.institution.phones[0];
-  const contactEmail = settings?.contactEmail || bn.institution.email;
+  const contactPhone = settings?.contactPhone || settings?.phones?.[0] || bn.institution.phones[0];
+  const contactEmail = settings?.contactEmail || settings?.email || bn.institution.email;
   const institutionTagline = settings?.tagline || bn.institution.subTitle;
+  const socialLinks = settings?.socialLinks || {};
 
   return (
     <>
@@ -55,6 +58,15 @@ export function PublicFooter({ settings }: PublicFooterProps = {}) {
                 <ShieldCheck className="h-4 w-4 text-[#007a85]" />
                 <span>{bn.institution.classesOffer}</span>
               </div>
+
+              {socialLinks && Object.values(socialLinks).some(Boolean) && (
+                <div className="pt-2">
+                  <p className="text-[11px] font-medium text-slate-400 mb-2">
+                    আমাদের সোশ্যাল মিডিয়া:
+                  </p>
+                  <SocialMediaLinks socialLinks={socialLinks} variant="footer" />
+                </div>
+              )}
             </div>
 
             {/* Column 2: Quick Links */}
@@ -206,6 +218,23 @@ export function PublicFooter({ settings }: PublicFooterProps = {}) {
                     {contactEmail}
                   </a>
                 </div>
+                {(settings?.whatsAppNumber || settings?.whatsappNumber) && (
+                  <div className="flex items-center gap-2.5">
+                    <MessageCircle className="h-4 w-4 text-[#25D366] shrink-0" />
+                    <a
+                      href={generateWhatsAppLink({
+                        phone: settings.whatsAppNumber || settings.whatsappNumber,
+                        message:
+                          settings.whatsAppPrefillMessage || DEFAULT_WHATSAPP_GENERAL_MESSAGE,
+                      })}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-white transition"
+                    >
+                      হোয়াটসঅ্যাপ: {settings.whatsAppNumber || settings.whatsappNumber}
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           </div>

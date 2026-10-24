@@ -38,7 +38,7 @@ export default async function AdmissionsPage() {
   const settings = await getSiteSettings();
 
   const whatsAppPhone =
-    settings.whatsAppNumber || settings.whatsappNumber || "+880 1866-098078";
+    settings.whatsAppNumber || settings.whatsappNumber || "+8801859787399";
   const whatsAppAdmissionLink = generateWhatsAppLink({
     phone: whatsAppPhone,
     message: settings.whatsAppPrefillMessage || DEFAULT_WHATSAPP_ADMISSION_MESSAGE,

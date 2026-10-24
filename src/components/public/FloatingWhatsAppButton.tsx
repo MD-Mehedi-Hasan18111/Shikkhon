@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MessageCircle, X } from "lucide-react";
 import {
   generateWhatsAppLink,
@@ -20,20 +20,62 @@ interface FloatingWhatsAppButtonProps {
 
 export function FloatingWhatsAppButton({ settings }: FloatingWhatsAppButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [liveSettings, setLiveSettings] = useState(settings);
+
+  // Sync when prop changes
+  useEffect(() => {
+    if (settings) {
+      setLiveSettings(settings);
+    }
+  }, [settings]);
+
+  // Always fetch latest settings on mount to ensure dynamic updates without requiring hard refresh
+  useEffect(() => {
+    let isMounted = true;
+    const fetchLatest = () => {
+      fetch("/api/site-settings", { cache: "no-store" })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((json) => {
+          if (isMounted && json?.data) {
+            setLiveSettings((prev) => ({
+              ...prev,
+              ...json.data,
+            }));
+          }
+        })
+        .catch(() => {});
+    };
+
+    fetchLatest();
+
+    const handleUpdate = () => fetchLatest();
+    window.addEventListener("site-settings-updated", handleUpdate);
+    return () => {
+      isMounted = false;
+      window.removeEventListener("site-settings-updated", handleUpdate);
+    };
+  }, []);
+
+  const currentSettings = liveSettings || settings;
 
   // Check if disabled by admin settings
-  if (settings?.isWhatsAppEnabled === false) {
+  if (currentSettings?.isWhatsAppEnabled === false) {
     return null;
   }
 
-  const phone = settings?.whatsAppNumber || settings?.whatsappNumber || "+880 1866-098078";
+  const phone =
+    currentSettings?.whatsAppNumber ||
+    currentSettings?.whatsappNumber ||
+    "+8801859787399";
+
   if (!isValidWhatsAppNumber(phone)) {
     return null;
   }
 
   const prefillMessage =
-    settings?.whatsAppPrefillMessage || DEFAULT_WHATSAPP_GENERAL_MESSAGE;
+    currentSettings?.whatsAppPrefillMessage || DEFAULT_WHATSAPP_GENERAL_MESSAGE;
   const link = generateWhatsAppLink({ phone, message: prefillMessage });
+  const institutionName = currentSettings?.institutionName || "শিক্ষণ একাডেমি";
 
   return (
     <aside aria-label="হোয়াটসঅ্যাপ সহায়তা" className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
@@ -51,10 +93,10 @@ export function FloatingWhatsAppButton({ settings }: FloatingWhatsAppButtonProps
               </div>
               <div>
                 <h4 className="text-xs font-bold text-slate-900 leading-tight">
-                  {settings?.institutionName || "শিক্ষণ একাডেমি"} হেল্পডেস্ক
+                  {institutionName} হেল্পডেস্ক
                 </h4>
                 <p className="text-[10px] text-emerald-600 font-medium">
-                  অনলাইন সহায়তা (হোয়াটসঅ্যাপ)
+                  অনলাইন সহায়তা ({phone})
                 </p>
               </div>
             </div>
