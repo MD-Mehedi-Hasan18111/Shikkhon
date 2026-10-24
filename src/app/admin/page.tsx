@@ -18,6 +18,7 @@ import {
   Calendar,
   CheckCircle2,
   XCircle,
+  CreditCard,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
@@ -26,6 +27,7 @@ import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Alert } from "@/components/ui/Alert";
 import { toBanglaNumber, formatBanglaDateFull } from "@/lib/utils";
+import { FinancialChart } from "@/components/admin/FinancialChart";
 
 interface DashboardStatsData {
   counts: {
@@ -41,6 +43,59 @@ interface DashboardStatsData {
     excused: number;
     total: number;
     rate: number;
+  };
+  financials?: {
+    currentMonth: {
+      year: number;
+      month: number;
+      monthName: string;
+      collection: number;
+      due: number;
+      payable: number;
+      paidCount: number;
+      partialCount: number;
+      dueCount: number;
+      collectionRate: number;
+    };
+    currentYear: {
+      year: number;
+      collection: number;
+      due: number;
+      payable: number;
+      collectionRate: number;
+    };
+    yearlyMonthlyTrend: Array<{
+      month: number;
+      monthName: string;
+      collection: number;
+      due: number;
+      payable: number;
+    }>;
+    recentPayments: Array<{
+      _id: string;
+      student?: {
+        fullName: string;
+        studentId: string;
+        phone: string;
+        classLevel: string;
+      };
+      batch?: {
+        name: string;
+        code: string;
+      };
+      month: number;
+      year: number;
+      feeAmount: number;
+      discountAmount: number;
+      payableAmount: number;
+      paidAmount: number;
+      dueAmount: number;
+      status: "paid" | "partial" | "due";
+      paymentMethod: string;
+      receiptNumber?: string;
+      paidAt?: string;
+      createdAt: string;
+    }>;
   };
   recentStudents: Array<{
     _id: string;
@@ -209,6 +264,257 @@ export default function AdminDashboardPage() {
           </div>
         </Alert>
       )}
+
+      {/* 0. Financial Highlights (Monthly & Yearly Collection / Due) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        {/* Monthly Collection */}
+        <Card className="border-l-4 border-l-[#00636b] shadow-xs bg-gradient-to-br from-white to-teal-50/20">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  চলতি মাসের মোট আদায় ({data?.financials?.currentMonth?.monthName || "চলতি মাস"})
+                </p>
+                {loading ? (
+                  <Skeleton className="h-8 w-24 mt-2" />
+                ) : (
+                  <h3 className="text-2xl sm:text-3xl font-extrabold text-teal-900 mt-1">
+                    ৳{toBanglaNumber((data?.financials?.currentMonth?.collection ?? 0).toLocaleString("bn-BD"))}
+                  </h3>
+                )}
+                <p className="text-[11px] text-teal-700 font-medium mt-1">
+                  আদায় হার: {toBanglaNumber(data?.financials?.currentMonth?.collectionRate ?? 0)}%
+                </p>
+              </div>
+              <div className="h-12 w-12 rounded-xl bg-teal-50 flex items-center justify-center text-[#00636b] shadow-xs">
+                <TrendingUp className="h-6 w-6" />
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+              <Link
+                href="/admin/payments"
+                className="text-[#00636b] font-medium hover:underline flex items-center gap-1"
+              >
+                <span>ফি কালেকশন ব্যবস্থাপনা</span>
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Monthly Outstanding Due */}
+        <Card className="border-l-4 border-l-rose-500 shadow-xs bg-gradient-to-br from-white to-rose-50/20">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  চলতি মাসের বকেয়া ({data?.financials?.currentMonth?.monthName || "চলতি মাস"})
+                </p>
+                {loading ? (
+                  <Skeleton className="h-8 w-24 mt-2" />
+                ) : (
+                  <h3 className="text-2xl sm:text-3xl font-extrabold text-rose-600 mt-1">
+                    ৳{toBanglaNumber((data?.financials?.currentMonth?.due ?? 0).toLocaleString("bn-BD"))}
+                  </h3>
+                )}
+                <p className="text-[11px] text-rose-600 font-medium mt-1">
+                  বকেয়া শিক্ষার্থী: {toBanglaNumber((data?.financials?.currentMonth?.dueCount ?? 0) + (data?.financials?.currentMonth?.partialCount ?? 0))} জন
+                </p>
+              </div>
+              <div className="h-12 w-12 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600 shadow-xs">
+                <AlertCircle className="h-6 w-6" />
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+              <Link
+                href="/admin/payments?status=due"
+                className="text-rose-600 font-medium hover:underline flex items-center gap-1"
+              >
+                <span>বকেয়া তালিকা দেখুন</span>
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Yearly Collection */}
+        <Card className="border-l-4 border-l-[#c27a29] shadow-xs bg-gradient-to-br from-white to-amber-50/20">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  বার্ষিক মোট আদায় ({toBanglaNumber(data?.financials?.currentYear?.year ?? 2026)})
+                </p>
+                {loading ? (
+                  <Skeleton className="h-8 w-24 mt-2" />
+                ) : (
+                  <h3 className="text-2xl sm:text-3xl font-extrabold text-amber-900 mt-1">
+                    ৳{toBanglaNumber((data?.financials?.currentYear?.collection ?? 0).toLocaleString("bn-BD"))}
+                  </h3>
+                )}
+                <p className="text-[11px] text-amber-700 font-medium mt-1">
+                  বার্ষিক আদায় হার: {toBanglaNumber(data?.financials?.currentYear?.collectionRate ?? 0)}%
+                </p>
+              </div>
+              <div className="h-12 w-12 rounded-xl bg-amber-50 flex items-center justify-center text-[#c27a29] shadow-xs">
+                <CreditCard className="h-6 w-6" />
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+              <Link
+                href="/admin/payments"
+                className="text-[#c27a29] font-medium hover:underline flex items-center gap-1"
+              >
+                <span>বার্ষিক রিপোর্ট</span>
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Yearly Due */}
+        <Card className="border-l-4 border-l-purple-600 shadow-xs bg-gradient-to-br from-white to-purple-50/20">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  বার্ষিক মোট বকেয়া ({toBanglaNumber(data?.financials?.currentYear?.year ?? 2026)})
+                </p>
+                {loading ? (
+                  <Skeleton className="h-8 w-24 mt-2" />
+                ) : (
+                  <h3 className="text-2xl sm:text-3xl font-extrabold text-purple-900 mt-1">
+                    ৳{toBanglaNumber((data?.financials?.currentYear?.due ?? 0).toLocaleString("bn-BD"))}
+                  </h3>
+                )}
+                <p className="text-[11px] text-purple-700 font-medium mt-1">
+                  মোট ডিমান্ড: ৳{toBanglaNumber((data?.financials?.currentYear?.payable ?? 0).toLocaleString("bn-BD"))}
+                </p>
+              </div>
+              <div className="h-12 w-12 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600 shadow-xs">
+                <Clock className="h-6 w-6" />
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+              <Link
+                href="/admin/payments"
+                className="text-purple-600 font-medium hover:underline flex items-center gap-1"
+              >
+                <span>আর্থিক হিসাব বিবরণী</span>
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Financial Analytics Chart & Recent Payment Transactions */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Chart Column (2 Cols) */}
+        <Card className="lg:col-span-2 shadow-xs bg-white border border-slate-200">
+          <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
+            <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-[#00636b]" />
+              <span>কোচিংয়ের বার্ষিক ফি আদায় ও বকেয়ার তুলনামূলক গ্রাফ</span>
+            </CardTitle>
+            <Link
+              href="/admin/payments"
+              className="text-xs text-[#00636b] hover:underline font-medium flex items-center gap-1"
+            >
+              <span>বিস্তারিত রিপোর্ট</span>
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </CardHeader>
+          <CardContent className="pt-4">
+            {loading ? (
+              <Skeleton className="h-60 w-full rounded-xl" />
+            ) : (
+              <FinancialChart
+                data={data?.financials?.yearlyMonthlyTrend || []}
+                year={data?.financials?.currentYear?.year || 2026}
+                totalYearlyCollection={data?.financials?.currentYear?.collection || 0}
+                totalYearlyDue={data?.financials?.currentYear?.due || 0}
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent Payments Column (1 Col) */}
+        <Card className="lg:col-span-1 shadow-xs bg-white border border-slate-200">
+          <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
+            <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-[#00636b]" />
+              <span>সাম্প্রতিক পেমেন্ট লেনদেন</span>
+            </CardTitle>
+            <Link
+              href="/admin/payments"
+              className="text-xs text-[#00636b] hover:underline font-medium"
+            >
+              সকল দেখুন
+            </Link>
+          </CardHeader>
+          <CardContent className="pt-3">
+            {loading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-12 w-full rounded-lg" />
+                <Skeleton className="h-12 w-full rounded-lg" />
+                <Skeleton className="h-12 w-full rounded-lg" />
+              </div>
+            ) : !data?.financials?.recentPayments || data.financials.recentPayments.length === 0 ? (
+              <div className="py-8 text-center text-slate-400">
+                <CreditCard className="h-8 w-8 mx-auto opacity-30 mb-2" />
+                <p className="text-xs font-medium">এখনো কোনো পেমেন্ট রেকর্ড নেই</p>
+                <Link
+                  href="/admin/payments"
+                  className="mt-2 inline-block text-xs font-bold text-[#00636b] hover:underline"
+                >
+                  পেমেন্ট এন্ট্রি করুন
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {data.financials.recentPayments.map((pm) => (
+                  <div
+                    key={pm._id}
+                    className="p-2.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="font-bold text-slate-800 text-xs">
+                        {pm.student?.fullName || "শিক্ষার্থী"}
+                      </div>
+                      <div className="text-[10px] text-slate-500 flex items-center gap-2 mt-0.5">
+                        <span>{pm.batch?.name || "ব্যাচ"}</span>
+                        <span>•</span>
+                        <span>{pm.student?.phone}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-teal-800 text-xs">
+                        ৳{toBanglaNumber((pm.paidAmount ?? 0).toLocaleString("bn-BD"))}
+                      </div>
+                      <div className="mt-0.5">
+                        {pm.status === "paid" ? (
+                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded">
+                            পরিশোধিত
+                          </span>
+                        ) : pm.status === "partial" ? (
+                          <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.2 rounded">
+                            আংশিক
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.2 rounded">
+                            বকেয়া ৳{toBanglaNumber(pm.dueAmount)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* 1. Core Institutions Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">

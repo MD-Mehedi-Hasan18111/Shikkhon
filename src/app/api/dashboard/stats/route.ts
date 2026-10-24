@@ -12,6 +12,7 @@ import { Attendance } from "@/models/Attendance";
 import { Exam } from "@/models/Exam";
 import { Result } from "@/models/Result";
 import { Notice } from "@/models/Notice";
+import { Payment } from "@/models/Payment";
 
 export const GET = createApiHandler(
   async (req: NextRequest) => {
@@ -35,6 +36,10 @@ export const GET = createApiHandler(
       session.role === "admin" ||
       session.role === "staff"
     ) {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1; // 1-12
+
       const [
         totalStudents,
         totalTeachers,
@@ -44,6 +49,10 @@ export const GET = createApiHandler(
         recentStudents,
         upcomingExams,
         recentNotices,
+        monthlyPaymentAgg,
+        yearlyPaymentAgg,
+        monthlyTrendAgg,
+        recentPayments,
       ] = await Promise.all([
         Student.countDocuments({ status: "active" }),
         Teacher.countDocuments({ isActive: true }),
@@ -71,6 +80,53 @@ export const GET = createApiHandler(
           .limit(5)
           .select("title priority isPinned publishedAt visibility")
           .lean(),
+        // Monthly payment aggregation
+        Payment.aggregate([
+          { $match: { year: currentYear, month: currentMonth } },
+          {
+            $group: {
+              _id: null,
+              collection: { $sum: "$paidAmount" },
+              due: { $sum: "$dueAmount" },
+              payable: { $sum: "$payableAmount" },
+              paidCount: { $sum: { $cond: [{ $eq: ["$status", "paid"] }, 1, 0] } },
+              partialCount: { $sum: { $cond: [{ $eq: ["$status", "partial"] }, 1, 0] } },
+              dueCount: { $sum: { $cond: [{ $eq: ["$status", "due"] }, 1, 0] } },
+            },
+          },
+        ]),
+        // Yearly payment aggregation
+        Payment.aggregate([
+          { $match: { year: currentYear } },
+          {
+            $group: {
+              _id: null,
+              collection: { $sum: "$paidAmount" },
+              due: { $sum: "$dueAmount" },
+              payable: { $sum: "$payableAmount" },
+            },
+          },
+        ]),
+        // 12-Month trend for chart
+        Payment.aggregate([
+          { $match: { year: currentYear } },
+          {
+            $group: {
+              _id: "$month",
+              collection: { $sum: "$paidAmount" },
+              due: { $sum: "$dueAmount" },
+              payable: { $sum: "$payableAmount" },
+            },
+          },
+          { $sort: { _id: 1 } },
+        ]),
+        // Recent 5 payments
+        Payment.find({})
+          .populate("student", "fullName studentId phone classLevel")
+          .populate("batch", "name code")
+          .sort({ createdAt: -1 })
+          .limit(5)
+          .lean(),
       ]);
 
       const attendanceCounts: Record<string, number> = {
@@ -97,6 +153,57 @@ export const GET = createApiHandler(
             )
           : 0;
 
+      const banglaMonthNames = [
+        "জানুয়ারি",
+        "ফেব্রুয়ারি",
+        "মার্চ",
+        "এপ্রিল",
+        "মে",
+        "জুন",
+        "জুলাই",
+        "আগস্ট",
+        "সেপ্টেম্বর",
+        "অক্টোবর",
+        "নভেম্বর",
+        "ডিসেম্বর",
+      ];
+
+      const monthTrendMap = new Map<number, { collection: number; due: number; payable: number }>();
+      monthlyTrendAgg.forEach((item) => {
+        monthTrendMap.set(item._id, {
+          collection: item.collection,
+          due: item.due,
+          payable: item.payable,
+        });
+      });
+
+      const yearlyMonthlyTrend = Array.from({ length: 12 }, (_, i) => {
+        const m = i + 1;
+        const trend = monthTrendMap.get(m) || { collection: 0, due: 0, payable: 0 };
+        return {
+          month: m,
+          monthName: banglaMonthNames[i],
+          collection: trend.collection,
+          due: trend.due,
+          payable: trend.payable,
+        };
+      });
+
+      const currentMonthData = monthlyPaymentAgg[0] || {
+        collection: 0,
+        due: 0,
+        payable: 0,
+        paidCount: 0,
+        partialCount: 0,
+        dueCount: 0,
+      };
+
+      const currentYearData = yearlyPaymentAgg[0] || {
+        collection: 0,
+        due: 0,
+        payable: 0,
+      };
+
       return apiSuccess(
         {
           role: session.role,
@@ -109,6 +216,39 @@ export const GET = createApiHandler(
           todayAttendance: {
             ...attendanceCounts,
             rate: todayAttendanceRate,
+          },
+          financials: {
+            currentMonth: {
+              year: currentYear,
+              month: currentMonth,
+              monthName: banglaMonthNames[currentMonth - 1],
+              collection: currentMonthData.collection,
+              due: currentMonthData.due,
+              payable: currentMonthData.payable,
+              paidCount: currentMonthData.paidCount,
+              partialCount: currentMonthData.partialCount,
+              dueCount: currentMonthData.dueCount,
+              collectionRate:
+                currentMonthData.payable > 0
+                  ? Math.round(
+                      (currentMonthData.collection / currentMonthData.payable) * 100
+                    )
+                  : 0,
+            },
+            currentYear: {
+              year: currentYear,
+              collection: currentYearData.collection,
+              due: currentYearData.due,
+              payable: currentYearData.payable,
+              collectionRate:
+                currentYearData.payable > 0
+                  ? Math.round(
+                      (currentYearData.collection / currentYearData.payable) * 100
+                    )
+                  : 0,
+            },
+            yearlyMonthlyTrend,
+            recentPayments,
           },
           recentStudents,
           upcomingExams,

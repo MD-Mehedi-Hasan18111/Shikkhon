@@ -381,3 +381,32 @@ export interface IMessage {
   updatedAt: Date;
 }
 
+// ==========================================
+// 15. Student Monthly Payment & Fee Types
+// ==========================================
+export type PaymentStatus = "paid" | "partial" | "due";
+export type PaymentMethod = "cash" | "bkash" | "nagad" | "rocket" | "bank" | "other";
+
+export interface IPayment {
+  _id: Types.ObjectId | string;
+  student: Types.ObjectId | string;
+  batch: Types.ObjectId | string;
+  academicSession?: Types.ObjectId | string;
+  classLevel: AcademicClassLevel;
+  month: number; // 1 to 12 (January = 1, December = 12)
+  year: number; // e.g. 2026
+  feeAmount: number;
+  discountAmount: number;
+  payableAmount: number;
+  paidAmount: number;
+  dueAmount: number;
+  status: PaymentStatus;
+  paymentMethod: PaymentMethod;
+  transactionId?: string;
+  receiptNumber?: string;
+  paidAt?: Date;
+  recordedBy?: Types.ObjectId | string;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}

@@ -22,6 +22,7 @@ import {
   FileText,
   Sparkles,
   Globe,
+  CreditCard,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { toggleSidebar, setMobileMenuOpen } from "@/store/slices/uiSlice";
@@ -70,6 +71,11 @@ export function AdminSidebar() {
           href: "/admin/enrollments",
           label: "ভর্তি ও রূপান্তর",
           icon: GraduationCap,
+        },
+        {
+          href: "/admin/payments",
+          label: "মাসিক ফি ও কালেকশন",
+          icon: CreditCard,
         },
       ],
     },

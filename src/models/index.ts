@@ -15,3 +15,4 @@ export * from "./Conversation";
 export * from "./Message";
 export * from "./StudentProfile";
 export * from "./Inquiry";
+export * from "./Payment";
