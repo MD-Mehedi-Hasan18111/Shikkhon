@@ -82,7 +82,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }));
 
     const noticeRoutes: MetadataRoute.Sitemap = notices.map((n: any) => ({
-      url: `${baseUrl}/notices/${n.slug}`,
+      url: `${baseUrl}/notices/${n._id}`,
       lastModified: n.updatedAt ? new Date(n.updatedAt) : new Date(),
       changeFrequency: "weekly",
       priority: 0.8,

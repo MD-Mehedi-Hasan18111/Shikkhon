@@ -134,25 +134,29 @@ export async function getAllPublishedNotices(search?: string, priority?: string)
   }
 }
 
-export async function getNoticeBySlug(slug: string) {
+export async function getNoticeById(idOrSlug: string) {
   try {
     await connectToDatabase();
-    let decodedSlug = slug;
+    if (!idOrSlug) return null;
+
+    let decoded = idOrSlug;
     try {
-      decodedSlug = decodeURIComponent(slug);
+      decoded = decodeURIComponent(idOrSlug);
     } catch {
-      decodedSlug = slug;
+      decoded = idOrSlug;
     }
 
-    const orConditions: any[] = [{ slug: decodedSlug }, { slug }];
-
-    if (mongoose.Types.ObjectId.isValid(slug)) {
-      orConditions.push({ _id: slug });
+    const orConditions: any[] = [];
+    if (mongoose.Types.ObjectId.isValid(idOrSlug)) {
+      orConditions.push({ _id: new mongoose.Types.ObjectId(idOrSlug) });
+      orConditions.push({ _id: idOrSlug });
     }
+    orConditions.push({ slug: decoded });
+    orConditions.push({ slug: idOrSlug });
 
     const notice = await Notice.findOne({
       $or: orConditions,
-      status: "published",
+      status: { $ne: "archived" },
     })
       .populate("author", "fullName role")
       .lean();
@@ -162,6 +166,8 @@ export async function getNoticeBySlug(slug: string) {
     return null;
   }
 }
+
+export const getNoticeBySlug = getNoticeById;
 
 export async function getRecentBlogPosts(limit = 6) {
   try {

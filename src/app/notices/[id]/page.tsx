@@ -16,19 +16,19 @@ import { PublicFooter } from "@/components/layout/PublicFooter";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
-import { getNoticeBySlug, getLatestNotices, getSiteSettings } from "@/lib/public-data";
+import { getNoticeById, getLatestNotices, getSiteSettings } from "@/lib/public-data";
 import { formatBanglaDate } from "@/lib/utils";
 import { ImageGalleryViewer } from "@/components/public/ImageGalleryViewer";
 
 interface PageProps {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ id: string }>;
 }
 
 export const revalidate = 60;
 
 export async function generateMetadata({ params }: PageProps) {
-  const { slug } = await params;
-  const notice = await getNoticeBySlug(slug);
+  const { id } = await params;
+  const notice = await getNoticeById(id);
   if (!notice) return { title: "নোটিশ পাওয়া যায়নি | শিক্ষণ একাডেমিক কেয়ার" };
 
   return {
@@ -38,9 +38,9 @@ export async function generateMetadata({ params }: PageProps) {
 }
 
 export default async function NoticeDetailPage({ params }: PageProps) {
-  const { slug } = await params;
+  const { id } = await params;
   const [notice, recentNotices, settings] = await Promise.all([
-    getNoticeBySlug(slug),
+    getNoticeById(id),
     getLatestNotices(4),
     getSiteSettings(),
   ]);
@@ -188,12 +188,12 @@ export default async function NoticeDetailPage({ params }: PageProps) {
                 </CardHeader>
                 <CardContent className="space-y-3 pt-0">
                   {recentNotices
-                    .filter((n: any) => n.slug !== notice.slug)
+                    .filter((n: any) => String(n._id) !== String(notice._id))
                     .slice(0, 3)
                     .map((item: any) => (
                       <Link
                         key={item._id}
-                        href={`/notices/${item.slug}`}
+                        href={`/notices/${item._id}`}
                         className="block p-3 rounded-lg hover:bg-slate-50 transition border border-transparent hover:border-slate-200 group"
                       >
                         <span className="text-xs text-slate-500 block mb-1">

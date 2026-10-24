@@ -209,7 +209,7 @@ export default async function NoticesPage({ searchParams }: PageProps) {
                         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                           {hasImages && (
                             <Link
-                              href={`/notices/${notice.slug}`}
+                              href={`/notices/${notice._id}`}
                               className="relative shrink-0 w-full sm:w-28 h-28 rounded-lg overflow-hidden border border-slate-200 bg-slate-100 group/img block"
                             >
                               <img
@@ -245,7 +245,7 @@ export default async function NoticesPage({ searchParams }: PageProps) {
                             </div>
 
                             <Link
-                              href={`/notices/${notice.slug}`}
+                              href={`/notices/${notice._id}`}
                               className="block group"
                             >
                               <h3 className="text-lg sm:text-xl font-bold text-slate-900 group-hover:text-primary-700 transition-colors">
@@ -265,7 +265,7 @@ export default async function NoticesPage({ searchParams }: PageProps) {
                           </div>
 
                           <div className="shrink-0 pt-2 sm:pt-0 self-start sm:self-center">
-                            <Link href={`/notices/${notice.slug}`}>
+                            <Link href={`/notices/${notice._id}`}>
                               <Button
                                 variant="outline"
                                 size="sm"
