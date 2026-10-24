@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Menu,
   Search,
@@ -12,29 +13,127 @@ import {
   HelpCircle,
   Calendar,
   Globe,
+  Sparkles,
+  BookOpen,
+  CheckCheck,
+  ChevronRight,
+  Inbox,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { toggleMobileMenu } from "@/store/slices/uiSlice";
 import { logout } from "@/store/slices/authSlice";
 import { addNotification } from "@/store/slices/notificationSlice";
 import { Badge } from "@/components/ui/Badge";
-import { formatBanglaDateFull } from "@/lib/utils";
+import { formatBanglaDateFull, toBanglaNumber, formatBanglaDate } from "@/lib/utils";
 import { bn } from "@/config/bangla-strings";
 
 export function AdminTopNav() {
+  const router = useRouter();
+  const pathname = usePathname();
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
-  const notifications = useAppSelector((state) => state.notifications.notifications);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
-  const handleTestNotification = () => {
-    dispatch(
-      addNotification({
-        type: "info",
-        title: "নোটিফিকেশন সেন্টার",
-        message: "সিস্টেমে কোনো নতুন নোটিশ নেই। সবকিছু স্বাভাবিকভাবে চলছে।",
+  const isTeacherPortal = pathname?.startsWith("/dashboard/teacher") ?? false;
+  const isStudentPortal = pathname?.startsWith("/dashboard/student") ?? false;
+
+  const isTeacher = user?.role === "teacher" || isTeacherPortal;
+  const isStudent = user?.role === "student" || user?.role === "guardian" || isStudentPortal;
+  const isAdmin = !isTeacher && !isStudent;
+
+  const roleFallbackText = isTeacher
+    ? "Teacher"
+    : isStudent
+    ? "Student"
+    : "অ্যাডমিনিস্ট্রেটর";
+
+  const headerDisplayName = user?.fullName || roleFallbackText;
+
+  const profileHref = isTeacher
+    ? "/dashboard/teacher/profile"
+    : isStudent
+    ? "/dashboard/student/profile"
+    : "/admin/profile";
+
+  const roleBadgeText = isTeacher
+    ? "Teacher"
+    : isStudent
+    ? "Student"
+    : user?.role
+    ? bn.userRoles[user.role] || "অ্যাডমিনিস্ট্রেটর"
+    : "অ্যাডমিনিস্ট্রেটর";
+
+  // Notification Center for Teachers and Students
+  const isTeacherOrStudent = isTeacher || isStudent;
+  const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
+  const [notificationsList, setNotificationsList] = useState<any[]>([]);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+
+  const fetchNotifications = useCallback(() => {
+    if (!isTeacherOrStudent) return;
+    setLoadingNotifications(true);
+    fetch("/api/notifications")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (json?.data) {
+          setNotificationsList(json.data.notifications || []);
+          setUnreadNotificationsCount(json.data.unreadCount || 0);
+        }
       })
-    );
+      .catch(() => {})
+      .finally(() => setLoadingNotifications(false));
+  }, [isTeacherOrStudent]);
+
+  useEffect(() => {
+    if (isTeacherOrStudent) {
+      fetchNotifications();
+      const interval = setInterval(fetchNotifications, 45000);
+      return () => clearInterval(interval);
+    }
+  }, [isTeacherOrStudent, fetchNotifications]);
+
+  const handleNotificationClick = async (item: any) => {
+    setNotificationDropdownOpen(false);
+    if (!item.isRead) {
+      // Optimistic update
+      setNotificationsList((prev) =>
+        prev.map((n) => (n.id === item.id ? { ...n, isRead: true } : n))
+      );
+      setUnreadNotificationsCount((prev) => Math.max(0, prev - 1));
+
+      // Call API
+      try {
+        await fetch("/api/notifications/mark-read", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            entityId: item.entityId,
+            entityType: item.type,
+          }),
+        });
+      } catch {}
+    }
+    router.push(item.link);
+  };
+
+  const handleMarkAllRead = async () => {
+    const unreadIds = notificationsList.filter((n) => !n.isRead).map((n) => n.entityId);
+    if (unreadIds.length === 0) return;
+
+    setNotificationsList((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    setUnreadNotificationsCount(0);
+
+    try {
+      await fetch("/api/notifications/mark-read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          all: true,
+          entityIds: unreadIds,
+        }),
+      });
+    } catch {}
   };
 
   return (
@@ -79,18 +178,136 @@ export function AdminTopNav() {
           <span className="hidden sm:inline">মূল ওয়েবসাইট</span>
         </Link>
 
-        {/* Notifications Icon */}
-        <button
-          onClick={handleTestNotification}
-          className="relative p-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition"
-          aria-label="নোটিফিকেশন দেখুন"
-          title="নোটিফিকেশন"
-        >
-          <Bell className="h-4 w-4" />
-          {notifications.length > 0 && (
-            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-[#c22126] ring-2 ring-white" />
-          )}
-        </button>
+        {/* Notifications Icon (For Teachers and Students) */}
+        {isTeacherOrStudent && (
+          <div className="relative">
+            <button
+              onClick={() => setNotificationDropdownOpen(!notificationDropdownOpen)}
+              className="relative p-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition focus:outline-hidden"
+              aria-label="নোটিফিকেশন দেখুন"
+              title="নোটিফিকেশন"
+            >
+              <Bell className="h-4 w-4" />
+              {unreadNotificationsCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-rose-600 text-white font-bold text-[9px] flex items-center justify-center ring-2 ring-white shadow-2xs animate-in zoom-in-50">
+                  {toBanglaNumber(unreadNotificationsCount)}
+                </span>
+              )}
+            </button>
+
+            {/* Notifications Dropdown Panel */}
+            {notificationDropdownOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-30"
+                  onClick={() => setNotificationDropdownOpen(false)}
+                />
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white border border-slate-200 shadow-2xl z-40 overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150">
+                  {/* Header */}
+                  <div className="p-3.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 text-sm">নোটিফিকেশন</span>
+                      {unreadNotificationsCount > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700 font-bold text-[10px]">
+                          {toBanglaNumber(unreadNotificationsCount)} টি নতুন
+                        </span>
+                      )}
+                    </div>
+                    {unreadNotificationsCount > 0 && (
+                      <button
+                        onClick={handleMarkAllRead}
+                        className="text-[11px] text-[#00636b] hover:underline font-semibold flex items-center gap-1"
+                      >
+                        <CheckCheck className="h-3 w-3" />
+                        <span>সব পঠিত করুন</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Notification List */}
+                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                    {loadingNotifications ? (
+                      <div className="p-6 text-center text-slate-400">
+                        লোডিং হচ্ছে...
+                      </div>
+                    ) : notificationsList.length === 0 ? (
+                      <div className="p-8 text-center text-slate-400 space-y-2">
+                        <Inbox className="h-8 w-8 mx-auto opacity-40 text-slate-400" />
+                        <p className="text-xs">কোনো নোটিফিকেশন নেই</p>
+                      </div>
+                    ) : (
+                      notificationsList.map((item) => {
+                        const isUnread = !item.isRead;
+                        return (
+                          <div
+                            key={item.id}
+                            onClick={() => handleNotificationClick(item)}
+                            className={`p-3.5 flex items-start gap-3 hover:bg-slate-50 cursor-pointer transition select-none ${
+                              isUnread ? "bg-teal-50/40" : ""
+                            }`}
+                          >
+                            {/* Category Icon */}
+                            <div
+                              className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 shadow-2xs ${
+                                item.type === "notice"
+                                  ? "bg-amber-100 text-amber-800"
+                                  : item.type === "event"
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : "bg-teal-100 text-[#00636b]"
+                              }`}
+                            >
+                              {item.type === "notice" ? (
+                                <Bell className="h-4 w-4" />
+                              ) : item.type === "event" ? (
+                                <Sparkles className="h-4 w-4" />
+                              ) : (
+                                <BookOpen className="h-4 w-4" />
+                              )}
+                            </div>
+
+                            {/* Details */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1 mb-1">
+                                <span
+                                  className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                    item.type === "notice"
+                                      ? "bg-amber-100 text-amber-800"
+                                      : item.type === "event"
+                                      ? "bg-emerald-100 text-emerald-800"
+                                      : "bg-teal-100 text-[#00636b]"
+                                  }`}
+                                >
+                                  {item.typeName}
+                                </span>
+                                <span className="text-[10px] text-slate-400">
+                                  {formatBanglaDate(item.createdAt)}
+                                </span>
+                              </div>
+                              <h5
+                                className={`text-xs leading-snug line-clamp-2 ${
+                                  isUnread
+                                    ? "font-bold text-slate-900"
+                                    : "font-medium text-slate-600"
+                                }`}
+                              >
+                                {item.title}
+                              </h5>
+                            </div>
+
+                            {/* Unread Indicator */}
+                            {isUnread && (
+                              <span className="h-2 w-2 rounded-full bg-[#00636b] mt-1 shrink-0" />
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {/* User Profile Menu */}
         <div className="relative">
@@ -101,11 +318,15 @@ export function AdminTopNav() {
           >
             <div className="text-right hidden sm:block">
               <span className="text-xs font-bold text-slate-800 leading-tight block">
-                {user?.fullName || "অ্যাডমিনিস্ট্রেটর"}
+                {headerDisplayName}
               </span>
             </div>
-            <div className="h-8 w-8 rounded-full bg-[#00636b] text-white flex items-center justify-center font-bold text-xs shadow-2xs">
-              {user?.fullName?.charAt(0) || "শি"}
+            <div className="h-8 w-8 rounded-full bg-[#00636b] text-white flex items-center justify-center font-bold text-xs shadow-2xs overflow-hidden">
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                user?.fullName?.charAt(0) || (isTeacher ? "T" : isStudent ? "S" : "অ্যা")
+              )}
             </div>
           </button>
 
@@ -119,35 +340,43 @@ export function AdminTopNav() {
               <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white border border-slate-200 shadow-xl py-1.5 z-40 text-xs animate-in fade-in duration-100">
                 <div className="px-4 py-2 border-b border-slate-100">
                   <p className="font-bold text-slate-800 truncate">
-                    {user?.fullName || "অ্যাডমিনিস্ট্রেটর"}
+                    {user?.fullName || roleFallbackText}
                   </p>
-                  <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                    {user?.phone || "০১৯৮২৭০৫৬৪৬"}
-                  </p>
+                  {user?.phone ? (
+                    <p className="text-[11px] text-slate-500 truncate mt-0.5 font-mono">
+                      {user.phone}
+                    </p>
+                  ) : user?.email ? (
+                    <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                      {user.email}
+                    </p>
+                  ) : null}
                   <div className="mt-2">
                     <Badge variant="primary" size="sm">
-                      {user?.role ? bn.userRoles[user.role] : "প্রধান প্রশাসক"}
+                      {roleBadgeText}
                     </Badge>
                   </div>
                 </div>
 
                 <div className="py-1">
                   <Link
-                    href="/admin/profile"
+                    href={profileHref}
                     onClick={() => setUserDropdownOpen(false)}
                     className="flex items-center gap-2 px-4 py-2 text-slate-700 hover:bg-slate-50 transition"
                   >
                     <User className="h-3.5 w-3.5 text-slate-400" />
                     <span>আমার প্রোফাইল</span>
                   </Link>
-                  <Link
-                    href="/admin/settings"
-                    onClick={() => setUserDropdownOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2 text-slate-700 hover:bg-slate-50 transition"
-                  >
-                    <Settings className="h-3.5 w-3.5 text-slate-400" />
-                    <span>সিস্টেম সেটিংস</span>
-                  </Link>
+                  {isAdmin && (
+                    <Link
+                      href="/admin/settings"
+                      onClick={() => setUserDropdownOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2 text-slate-700 hover:bg-slate-50 transition"
+                    >
+                      <Settings className="h-3.5 w-3.5 text-slate-400" />
+                      <span>সিস্টেম সেটিংস</span>
+                    </Link>
+                  )}
                   <Link
                     href="/"
                     onClick={() => setUserDropdownOpen(false)}

@@ -205,10 +205,12 @@ export function initSocketServer(httpServer = createServer()) {
             sender: user.userId,
             text: text.trim(),
             readBy: [user.userId],
+            deletedFor: [],
             status: "sent",
           });
 
-          // Update Conversation lastMessage
+          // Update Conversation lastMessage and unhide for participants
+          conversation.deletedFor = [];
           conversation.lastMessage = {
             text: text.trim(),
             sender: user.userId as any,
@@ -256,6 +258,7 @@ export function initSocketServer(httpServer = createServer()) {
           await Message.updateMany(
             {
               conversation: conversationId,
+              deletedFor: { $ne: user.userId },
               sender: { $ne: user.userId },
               readBy: { $ne: user.userId },
             },

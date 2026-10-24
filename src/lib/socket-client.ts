@@ -25,7 +25,11 @@ export function getOrCreateSocket(): Socket {
   }
 
   if (!globalSocket) {
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin;
+    const socketUrl =
+      process.env.NEXT_PUBLIC_SOCKET_URL ||
+      (typeof window !== "undefined" && window.location.port === "3000"
+        ? `${window.location.protocol}//${window.location.hostname}:3001`
+        : window.location.origin);
 
     globalSocket = io(socketUrl, {
       autoConnect: true,
@@ -225,6 +229,7 @@ export function useSocketChat({
     if (socket && socket.connected) {
       socket.emit("mark_read", { conversationId });
     }
+    fetch(`/api/messages?conversationId=${conversationId}&page=1&limit=1`).catch(() => {});
   }, [conversationId]);
 
   // Manual reconnect trigger

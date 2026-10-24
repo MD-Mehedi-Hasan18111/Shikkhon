@@ -19,6 +19,8 @@ import {
   CheckCheck,
   ExternalLink,
   X,
+  MoreVertical,
+  Trash2,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
@@ -26,13 +28,33 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { useAppSelector } from "@/store";
+import { useAppDispatch, useAppSelector } from "@/store";
+import { setCredentials } from "@/store/slices/authSlice";
 import { formatBanglaMessageTime, parseSafeMessageText } from "@/lib/message-utils";
 import { useSocketChat } from "@/lib/socket-client";
 import { ChatConversationView } from "@/components/chat/ChatConversationView";
+import { cn, toBanglaNumber } from "@/lib/utils";
 
 export default function TeacherMessagesPage() {
-  const currentUser = useAppSelector((state) => state.auth.user);
+  const dispatch = useAppDispatch();
+  const reduxUser = useAppSelector((state) => state.auth.user);
+  const [currentUser, setCurrentUser] = useState<any>(reduxUser);
+
+  useEffect(() => {
+    if (reduxUser) {
+      setCurrentUser(reduxUser);
+    } else {
+      fetch("/api/auth/me")
+        .then((res) => res.json())
+        .then((json) => {
+          if (json.success && json.data) {
+            setCurrentUser(json.data);
+            dispatch(setCredentials({ user: json.data, token: "" }));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [reduxUser, dispatch]);
 
   const [loading, setLoading] = useState(true);
   const [conversations, setConversations] = useState<any[]>([]);
@@ -62,6 +84,18 @@ export default function TeacherMessagesPage() {
   const [reportReason, setReportReason] = useState("");
   const [reporting, setReporting] = useState(false);
   const [reportSuccess, setReportSuccess] = useState(false);
+
+  // Conversation Item 3-dot menu state
+  const [openConvMenuId, setOpenConvMenuId] = useState<string | null>(null);
+
+  // Close conversation 3-dot menu on click outside
+  useEffect(() => {
+    const handleOutside = () => setOpenConvMenuId(null);
+    if (openConvMenuId) {
+      window.addEventListener("click", handleOutside);
+    }
+    return () => window.removeEventListener("click", handleOutside);
+  }, [openConvMenuId]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -124,16 +158,13 @@ export default function TeacherMessagesPage() {
       const json = await res.json();
       if (json.success && json.data) {
         setConversations(json.data);
-        if (json.data.length > 0 && !activeConversationId) {
-          setActiveConversationId(json.data[0]._id);
-        }
       }
     } catch {
       // Ignore
     } finally {
       setLoading(false);
     }
-  }, [activeConversationId]);
+  }, []);
 
   useEffect(() => {
     fetchConversations();
@@ -174,6 +205,59 @@ export default function TeacherMessagesPage() {
     }
   }, [activeConversationId, loadMessages, markAsRead]);
 
+  // Silent sync for real-time messages & seen status without flickering loading spinners
+  const syncActiveConversation = useCallback(async (convId: string) => {
+    if (!convId) return;
+    try {
+      const res = await fetch(`/api/messages?conversationId=${convId}&page=1&limit=30`);
+      const json = await res.json();
+      if (json.success && json.data) {
+        const latestMsgs: any[] = json.data.messages || [];
+        setMessages((prev) => {
+          if (latestMsgs.length === 0 && prev.length === 0) return prev;
+
+          const isDifferent =
+            latestMsgs.length !== prev.length ||
+            latestMsgs.some((lm) => {
+              const matchingPrev = prev.find((p) => p._id === lm._id);
+              if (!matchingPrev) return true;
+              return (
+                matchingPrev.status !== lm.status ||
+                (matchingPrev.readBy?.length || 0) !== (lm.readBy?.length || 0) ||
+                matchingPrev.text !== lm.text
+              );
+            });
+
+          if (!isDifferent) return prev;
+
+          const olderMessages = prev.filter(
+            (p) => !latestMsgs.some((lm) => lm._id === p._id)
+          );
+          return [...olderMessages, ...latestMsgs];
+        });
+      }
+    } catch {
+      // Ignore background sync errors
+    }
+  }, []);
+
+  // Periodic live sync for active chat and conversations list
+  useEffect(() => {
+    if (!activeConversationId) {
+      const listTimer = setInterval(() => {
+        fetchConversations();
+      }, 4000);
+      return () => clearInterval(listTimer);
+    }
+
+    const activeTimer = setInterval(() => {
+      syncActiveConversation(activeConversationId);
+      fetchConversations();
+    }, 2000);
+
+    return () => clearInterval(activeTimer);
+  }, [activeConversationId, syncActiveConversation, fetchConversations]);
+
   useEffect(() => {
     if (!loadingMessages && page === 1) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -205,7 +289,7 @@ export default function TeacherMessagesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           recipientId,
-          text: "আসসালামু আলাইকুম।",
+          initOnly: true,
         }),
       });
       const json = await res.json();
@@ -280,6 +364,7 @@ export default function TeacherMessagesPage() {
     }
     setConversations((prev) => prev.filter((c) => c._id !== conversationId));
     setActiveConversationId(null);
+    setMessages([]);
   };
 
   const handleReportMessage = async () => {
@@ -311,16 +396,23 @@ export default function TeacherMessagesPage() {
     }
   };
 
+  const currentUserId = String(currentUser?._id || currentUser?.id || "");
+
   const activeConv = conversations.find((c) => c._id === activeConversationId);
-  const otherParticipant = activeConv?.participants?.find(
-    (p: any) => p._id !== currentUser?.id
-  );
+  const otherParticipant = activeConv?.participants?.find((p: any) => {
+    const pId = String(p?._id || p?.id || p || "");
+    return pId && pId !== currentUserId;
+  }) || activeConv?.participants?.[0];
 
   const filteredConversations = conversations.filter((c) => {
-    const other = c.participants?.find((p: any) => p._id !== currentUser?.id);
+    const other = c.participants?.find((p: any) => {
+      const pId = String(p?._id || p?.id || p || "");
+      return pId && pId !== currentUserId;
+    }) || c.participants?.[0];
     if (!other) return false;
     return (
       other.fullName?.toLowerCase().includes(search.toLowerCase()) ||
+      other.phone?.toLowerCase().includes(search.toLowerCase()) ||
       other.role?.toLowerCase().includes(search.toLowerCase())
     );
   });
@@ -332,43 +424,16 @@ export default function TeacherMessagesPage() {
           title="যোগাযোগ ও বার্তা ইনবক্স"
           description="শিক্ষার্থী ও কর্তৃপক্ষের সাথে সরাসরি বার্তা বিনিময় ও একাডেমি নোটিফিকেশন"
         />
-
-        {/* Real-time Status Badge */}
-        <div className="flex items-center gap-2">
-          {socketStatus === "connected" && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-2xs">
-              <span className="h-2 w-2 rounded-full bg-emerald-600 animate-pulse" />
-              রিয়েলটাইম সংযুক্ত (অনলাইন)
-            </span>
-          )}
-          {socketStatus === "reconnecting" && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200 shadow-2xs">
-              <RefreshCw className="h-3 w-3 animate-spin text-amber-600" />
-              পুনরায় সংযোগ হচ্ছে...
-            </span>
-          )}
-          {(socketStatus === "disconnected" || socketStatus === "error") && (
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-rose-100 text-rose-800 border border-rose-200 shadow-2xs">
-                <WifiOff className="h-3 w-3 text-rose-600" />
-                অফলাইন মোড
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={reconnect}
-                className="h-7 text-xs"
-              >
-                পুনরায় চেষ্টা
-              </Button>
-            </div>
-          )}
-        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[620px]">
-        {/* Left Panel: Conversation List */}
-        <div className="lg:col-span-4 flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        {/* Left Panel: Conversation List (Messenger-style mobile toggle) */}
+        <div
+          className={cn(
+            "flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs lg:col-span-4",
+            activeConversationId ? "hidden lg:flex" : "flex"
+          )}
+        >
           <div className="p-4 border-b border-slate-100 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
@@ -425,24 +490,36 @@ export default function TeacherMessagesPage() {
               </div>
             ) : (
               filteredConversations.map((conv) => {
-                const other = conv.participants?.find(
-                  (p: any) => p._id !== currentUser?.id
-                );
+                const other = conv.participants?.find((p: any) => {
+                  const pId = String(p?._id || p?.id || p || "");
+                  return pId && pId !== currentUserId;
+                }) || conv.participants?.[0];
                 const isActive = conv._id === activeConversationId;
                 const unread = conv.unreadCount || 0;
 
                 return (
-                  <button
+                  <div
                     key={conv._id}
-                    onClick={() => setActiveConversationId(conv._id)}
-                    className={`w-full p-3.5 text-left flex items-start gap-3 transition ${
+                    onClick={() => {
+                      setActiveConversationId(conv._id);
+                      setConversations((prev) =>
+                        prev.map((c) => (c._id === conv._id ? { ...c, unreadCount: 0 } : c))
+                      );
+                      window.dispatchEvent(new CustomEvent("messages-updated"));
+                    }}
+                    className={cn(
+                      "w-full p-3.5 text-left flex items-start gap-3 transition cursor-pointer select-none group relative",
                       isActive
                         ? "bg-[#d7eef1]/40 border-l-4 border-[#00636b]"
                         : "hover:bg-slate-50"
-                    }`}
+                    )}
                   >
-                    <div className="h-10 w-10 rounded-full bg-[#00636b] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-2xs">
-                      {other?.fullName?.charAt(0) || "U"}
+                    <div className="h-10 w-10 rounded-full bg-[#00636b] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-2xs overflow-hidden">
+                      {other?.avatarUrl ? (
+                        <img src={other.avatarUrl} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <span>{other?.fullName?.charAt(0) || "U"}</span>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1 mb-0.5">
@@ -455,26 +532,71 @@ export default function TeacherMessagesPage() {
                             : ""}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between gap-1">
-                        <p className="text-[11px] text-slate-500 truncate">
+                      {other?.phone && (
+                        <p className="text-[10px] font-mono text-slate-500 truncate mb-0.5">
+                          {other.phone}
+                        </p>
+                      )}
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[11px] text-slate-500 truncate flex-1">
                           {conv.lastMessage?.text || "কথোপকথন শুরু করুন..."}
                         </p>
-                        {unread > 0 && (
-                          <span className="h-5 w-5 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
-                            {unread}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {unread > 0 && (
+                            <span className="h-5 min-w-5 px-1.5 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                              {toBanglaNumber(unread)}
+                            </span>
+                          )}
+                          {/* 3-Dot Dropdown for conversation deletion */}
+                          <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenConvMenuId(openConvMenuId === conv._id ? null : conv._id);
+                              }}
+                              className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-full transition"
+                              title="কথোপকথন অপশন"
+                              aria-label="Conversation options"
+                            >
+                              <MoreVertical className="h-3.5 w-3.5" />
+                            </button>
+                            {openConvMenuId === conv._id && (
+                              <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-30 animate-in fade-in zoom-in-95 duration-100">
+                                <button
+                                  type="button"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    setOpenConvMenuId(null);
+                                    if (confirm("আপনি কি নিশ্চিতভাবে এই কথোপকথনটি ইনবক্স থেকে মুছে ফেলতে চান?")) {
+                                      await handleDeleteConversation(conv._id);
+                                    }
+                                  }}
+                                  className="w-full px-3 py-1.5 text-left text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2 font-medium transition"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 text-rose-500" />
+                                  <span>কথোপকথন মুছুন</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </button>
+                  </div>
                 );
               })
             )}
           </div>
         </div>
 
-        {/* Right Panel: Chat Thread Window */}
-        <div className="lg:col-span-8 flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        {/* Right Panel: Chat Thread Window (Messenger-style mobile toggle) */}
+        <div
+          className={cn(
+            "flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs lg:col-span-8",
+            !activeConversationId ? "hidden lg:flex" : "flex"
+          )}
+        >
           {activeConv && otherParticipant ? (
             <ChatConversationView
               activeConversation={activeConv}
@@ -488,6 +610,8 @@ export default function TeacherMessagesPage() {
               onEditMessage={handleEditMessage}
               onDeleteMessage={handleDeleteMessage}
               onDeleteConversation={handleDeleteConversation}
+              onCloseConversation={() => setActiveConversationId(null)}
+              onBack={() => setActiveConversationId(null)}
               onReportMessage={(msg) => {
                 setSelectedMessageForReport(msg);
                 setReportModalOpen(true);
@@ -495,14 +619,15 @@ export default function TeacherMessagesPage() {
             />
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400 space-y-3">
-              <MessageSquare className="h-12 w-12 text-slate-300 stroke-[1.5]" />
+              <div className="h-14 w-14 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#00636b] shadow-2xs">
+                <MessageSquare className="h-7 w-7 text-[#00636b]" />
+              </div>
               <div>
-                <h4 className="font-bold text-slate-700 text-sm">
-                  কোনো চ্যাট নির্বাচিত নেই
+                <h4 className="font-bold text-slate-800 text-sm">
+                  কোনো কথোপকথন নির্বাচিত নেই
                 </h4>
-                <p className="text-xs text-slate-400 mt-1">
-                  কথোপকথন শুরু করতে বাম পাশের তালিকা থেকে কাউকে বেছে নিন অথবা নতুন চ্যাট
-                  শুরু করুন।
+                <p className="text-xs text-slate-500 mt-1 max-w-sm">
+                  কথোপকথন দেখতে বা নতুন বার্তা পাঠাতে বাম পাশের তালিকা থেকে একটি কথোপকথন নির্বাচন করুন।
                 </p>
               </div>
             </div>
@@ -568,8 +693,8 @@ export default function TeacherMessagesPage() {
                         </span>
                       </div>
                     </div>
-                    <Badge variant="outline" className="text-[10px]">
-                      মেসেজ পাঠান
+                    <Badge variant="outline" className="text-[10px] font-medium text-teal-700 bg-teal-50 border-teal-200">
+                      Message
                     </Badge>
                   </button>
                 ))

@@ -28,13 +28,15 @@ import { useAppDispatch, useAppSelector } from "@/store";
 import { toggleSidebar, setMobileMenuOpen } from "@/store/slices/uiSlice";
 import { logout } from "@/store/slices/authSlice";
 import { bn } from "@/config/bangla-strings";
-import { cn } from "@/lib/utils";
+import { cn, toBanglaNumber } from "@/lib/utils";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 
 interface NavItem {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
+  badgeColor?: string;
 }
 
 interface NavGroup {
@@ -47,6 +49,7 @@ export function AdminSidebar() {
   const dispatch = useAppDispatch();
   const { sidebarCollapsed, mobileMenuOpen } = useAppSelector((state) => state.ui);
   const user = useAppSelector((state) => state.auth.user);
+  const unreadMessagesCount = useUnreadMessages();
 
   const navGroups: NavGroup[] = [
     {
@@ -131,6 +134,8 @@ export function AdminSidebar() {
           href: "/admin/messages",
           label: "ইনবক্স ও মেসেজ",
           icon: MessageSquare,
+          badge: unreadMessagesCount > 0 ? toBanglaNumber(unreadMessagesCount) : undefined,
+          badgeColor: "bg-emerald-600",
         },
       ],
     },
@@ -253,9 +258,18 @@ export function AdminSidebar() {
                   )}
 
                   {!sidebarCollapsed && item.badge && (
-                    <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-[#c27a29] text-white shrink-0">
+                    <span
+                      className={cn(
+                        "px-1.5 py-0.5 text-[10px] font-bold rounded-full text-white shrink-0 ml-auto",
+                        item.badgeColor || "bg-[#c27a29]"
+                      )}
+                    >
                       {item.badge}
                     </span>
+                  )}
+
+                  {sidebarCollapsed && item.badge && (
+                    <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-white" />
                   )}
 
                   {/* Active Indicator bar */}

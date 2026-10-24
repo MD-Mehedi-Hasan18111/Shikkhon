@@ -67,14 +67,21 @@ const MessageSchema = new Schema<IMessageDocument>(
     deletedAt: {
       type: Date,
     },
+    deletedFor: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
   },
   {
     ...defaultSchemaOptions,
   }
 );
 
-// High-performance compound index for paginated chat history (avoiding 16MB doc limit)
+// High-performance compound indexes for paginated chat history and per-user deleted status
 MessageSchema.index({ conversation: 1, createdAt: -1 });
+MessageSchema.index({ conversation: 1, deletedFor: 1, createdAt: -1 });
 
 export const Message: Model<IMessageDocument> =
   mongoose.models.Message || mongoose.model<IMessageDocument>("Message", MessageSchema);

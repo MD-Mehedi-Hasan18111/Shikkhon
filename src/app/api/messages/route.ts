@@ -17,7 +17,8 @@ const sendMessageSchema = z.object({
   text: z.string().trim().max(2000, "মেসেজ সর্বোচ্চ ২০০০ অক্ষরের মধ্যে হতে হবে").optional().default(""),
   imageUrl: z.string().trim().optional(),
   attachments: z.array(z.any()).optional(),
-}).refine((data) => (data.text && data.text.trim().length > 0) || (data.imageUrl && data.imageUrl.trim().length > 0) || (data.attachments && data.attachments.length > 0), {
+  initOnly: z.boolean().optional(),
+}).refine((data) => data.initOnly || (data.text && data.text.trim().length > 0) || (data.imageUrl && data.imageUrl.trim().length > 0) || (data.attachments && data.attachments.length > 0), {
   message: "বার্তা লিখুন অথবা একটি ছবি নির্বাচন করুন",
 });
 
@@ -49,15 +50,18 @@ export const GET = createApiHandler(
         Math.max(1, parseInt(searchParams.get("limit") || "30", 10))
       );
 
-      const totalCount = await Message.countDocuments({
+      const messageFilter = {
         conversation: conversationId,
-      });
+        deletedFor: { $ne: session.userId },
+      };
+
+      const totalCount = await Message.countDocuments(messageFilter);
 
       // To fetch the most recent messages while paging backwards:
       const skip = Math.max(0, totalCount - page * limit);
       const effectiveLimit = Math.min(limit, totalCount - (page - 1) * limit);
 
-      const messages = await Message.find({ conversation: conversationId })
+      const messages = await Message.find(messageFilter)
         .populate("sender", "fullName role avatarUrl")
         .sort({ createdAt: 1 })
         .skip(skip)
@@ -68,6 +72,7 @@ export const GET = createApiHandler(
       await Message.updateMany(
         {
           conversation: conversationId,
+          deletedFor: { $ne: session.userId },
           sender: { $ne: session.userId },
           readBy: { $ne: session.userId },
         },
@@ -106,17 +111,39 @@ export const GET = createApiHandler(
       .sort({ "lastMessage.sentAt": -1, updatedAt: -1 })
       .lean();
 
-    // Compute live unread message counts per conversation
+    // Compute live unread message counts and effective last message per conversation
     const conversationsWithUnread = await Promise.all(
       conversations.map(async (conv) => {
         const unreadCount = await Message.countDocuments({
           conversation: conv._id,
+          deletedFor: { $ne: session.userId },
           sender: { $ne: session.userId },
           readBy: { $ne: session.userId },
         });
 
+        // Find latest message visible to this user
+        const latestMessage = await Message.findOne({
+          conversation: conv._id,
+          deletedFor: { $ne: session.userId },
+        })
+          .sort({ createdAt: -1 })
+          .populate("sender", "fullName role")
+          .lean();
+
+        const effectiveLastMessage = latestMessage
+          ? {
+              text: latestMessage.text,
+              sender: latestMessage.sender,
+              sentAt: (latestMessage as any).createdAt,
+            }
+          : {
+              text: "কথোপকথন শুরু করুন...",
+              sentAt: (conv as any).updatedAt || new Date(),
+            };
+
         return {
           ...conv,
+          lastMessage: effectiveLastMessage,
           unreadCount,
         };
       })
@@ -235,6 +262,17 @@ export const POST = createApiHandler(
           status: "active",
         });
       }
+
+      // If user only wanted to open/init conversation without sending an initial message
+      if (validated.initOnly) {
+        if (conversation.deletedFor && conversation.deletedFor.length > 0) {
+          conversation.deletedFor = conversation.deletedFor.filter(
+            (id: any) => id.toString() !== session.userId.toString()
+          );
+          await conversation.save();
+        }
+        return apiSuccess({ conversation: conversation._id }, "কথোপকথন প্রস্তুত করা হয়েছে।");
+      }
     } else {
       throw AppError.badRequest(
         "Invalid request",
@@ -251,6 +289,7 @@ export const POST = createApiHandler(
       text: messageText,
       imageUrl: finalImageUrl,
       readBy: [session.userId],
+      deletedFor: [],
       status: "sent",
     });
 
@@ -356,7 +395,7 @@ export const DELETE = createApiHandler(
       return apiSuccess({ messageId }, "বার্তা মুছে ফেলা হয়েছে।");
     }
 
-    // Case 2: Delete Conversation from User's Inbox
+    // Case 2: Delete conversation for this user (other participant retains full chat history)
     if (conversationId) {
       const conversation = await Conversation.findOne({
         _id: conversationId,
@@ -370,14 +409,39 @@ export const DELETE = createApiHandler(
         );
       }
 
+      // 1. Mark all existing messages as deleted for this user only
+      await Message.updateMany(
+        { conversation: conversationId },
+        { $addToSet: { deletedFor: session.userId } }
+      );
+
+      // 2. Hide the conversation from this user's conversation list
       await Conversation.updateOne(
         { _id: conversationId },
         { $addToSet: { deletedFor: session.userId } }
       );
 
+      // 3. Permanent cleanup: If all participants have deleted the messages/conversation, remove them from database
+      if (conversation.participants && conversation.participants.length > 0) {
+        await Message.deleteMany({
+          conversation: conversationId,
+          deletedFor: { $all: conversation.participants },
+        });
+
+        const updatedConv = await Conversation.findById(conversationId).lean();
+        if (updatedConv) {
+          const allDeleted = (conversation.participants as any[]).every((p) =>
+            updatedConv.deletedFor?.some((df: any) => df.toString() === p.toString())
+          );
+          if (allDeleted) {
+            await Conversation.deleteOne({ _id: conversationId });
+          }
+        }
+      }
+
       return apiSuccess(
         { conversationId },
-        "কথোপকথনটি ইনবক্স থেকে মুছে ফেলা হয়েছে।"
+        "কথোপকথনটি আপনার পক্ষ থেকে মুছে ফেলা হয়েছে।"
       );
     }
 

@@ -45,6 +45,18 @@ const ConversationSchema = new Schema<IConversationDocument>(
         ref: "User",
       },
     ],
+    clearedHistory: [
+      {
+        user: {
+          type: Schema.Types.ObjectId,
+          ref: "User",
+        },
+        clearedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   {
     ...defaultSchemaOptions,

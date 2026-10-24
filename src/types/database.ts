@@ -355,6 +355,10 @@ export interface IConversation {
   };
   status: "active" | "archived";
   deletedFor?: (Types.ObjectId | string)[];
+  clearedHistory?: {
+    user: Types.ObjectId | string;
+    clearedAt: Date;
+  }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -376,6 +380,7 @@ export interface IMessage {
   editedAt?: Date;
   isDeleted?: boolean;
   deletedAt?: Date;
+  deletedFor?: (Types.ObjectId | string)[];
   attachments?: IMessageAttachment[];
   readBy: (Types.ObjectId | string)[];
   status: "sent" | "delivered" | "read";

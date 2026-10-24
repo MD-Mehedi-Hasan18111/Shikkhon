@@ -22,12 +22,14 @@ import { useAppDispatch, useAppSelector } from "@/store";
 import { toggleSidebar, setMobileMenuOpen } from "@/store/slices/uiSlice";
 import { logout } from "@/store/slices/authSlice";
 import { bn } from "@/config/bangla-strings";
-import { cn } from "@/lib/utils";
+import { cn, toBanglaNumber } from "@/lib/utils";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 
 interface NavItem {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  badge?: string;
 }
 
 interface NavGroup {
@@ -40,6 +42,7 @@ export function TeacherSidebar() {
   const dispatch = useAppDispatch();
   const { sidebarCollapsed, mobileMenuOpen } = useAppSelector((state) => state.ui);
   const user = useAppSelector((state) => state.auth.user);
+  const unreadMessagesCount = useUnreadMessages();
 
   const navGroups: NavGroup[] = [
     {
@@ -89,6 +92,7 @@ export function TeacherSidebar() {
           href: "/dashboard/teacher/messages",
           label: "বার্তা ও যোগাযোগ",
           icon: MessageSquare,
+          badge: unreadMessagesCount > 0 ? toBanglaNumber(unreadMessagesCount) : undefined,
         },
       ],
     },
@@ -181,11 +185,11 @@ export function TeacherSidebar() {
                     href={item.href}
                     onClick={() => dispatch(setMobileMenuOpen(false))}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition select-none group",
+                      "flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition select-none group relative",
                       isActive
                         ? "bg-[#00636b] text-white shadow-2xs"
                         : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-                      sidebarCollapsed && "justify-center px-0"
+                      sidebarCollapsed && "justify-center px-0 h-10 w-10 mx-auto"
                     )}
                     title={sidebarCollapsed ? item.label : undefined}
                   >
@@ -197,7 +201,15 @@ export function TeacherSidebar() {
                           : "text-slate-500 group-hover:text-slate-700"
                       )}
                     />
-                    {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
+                    {!sidebarCollapsed && <span className="truncate flex-1">{item.label}</span>}
+                    {!sidebarCollapsed && item.badge && (
+                      <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500 text-white shrink-0 ml-auto">
+                        {item.badge}
+                      </span>
+                    )}
+                    {sidebarCollapsed && item.badge && (
+                      <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-white" />
+                    )}
                   </Link>
                 );
               })}

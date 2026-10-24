@@ -16,6 +16,7 @@ import {
   MoreVertical,
   Maximize2,
   AlertTriangle,
+  ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -40,7 +41,9 @@ interface ChatConversationViewProps {
   onEditMessage: (messageId: string, newText: string) => Promise<void>;
   onDeleteMessage: (messageId: string) => Promise<void>;
   onDeleteConversation: (conversationId: string) => Promise<void>;
+  onCloseConversation?: () => void;
   onReportMessage?: (message: any) => void;
+  onBack?: () => void;
 }
 
 export function ChatConversationView({
@@ -55,7 +58,9 @@ export function ChatConversationView({
   onEditMessage,
   onDeleteMessage,
   onDeleteConversation,
+  onCloseConversation,
   onReportMessage,
+  onBack,
 }: ChatConversationViewProps) {
   const [inputText, setInputText] = useState("");
   const [sending, setSending] = useState(false);
@@ -74,9 +79,26 @@ export function ChatConversationView({
   // Delete Conversation confirm modal
   const [showDeleteConvModal, setShowDeleteConvModal] = useState(false);
   const [deletingConv, setDeletingConv] = useState(false);
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const headerMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close header menu on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (headerMenuRef.current && !headerMenuRef.current.contains(e.target as Node)) {
+        setHeaderMenuOpen(false);
+      }
+    };
+    if (headerMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [headerMenuOpen]);
 
   // Auto scroll to bottom on new message
   useEffect(() => {
@@ -145,11 +167,12 @@ export function ChatConversationView({
     }
   };
 
-  const handleSaveEdit = async (messageId: string) => {
-    if (!editingText.trim() || savingEdit) return;
+  const handleSaveEdit = async () => {
+    if (!editingMessageId || !editingText.trim() || savingEdit) return;
+
+    setSavingEdit(true);
     try {
-      setSavingEdit(true);
-      await onEditMessage(messageId, editingText.trim());
+      await onEditMessage(editingMessageId, editingText.trim());
       setEditingMessageId(null);
       setEditingText("");
     } catch (err: unknown) {
@@ -159,16 +182,32 @@ export function ChatConversationView({
     }
   };
 
-  const otherParticipant = activeConversation?.participants?.find(
-    (p: any) => p._id !== currentUser?.id
-  );
+  const currentUserId = String(currentUser?._id || currentUser?.id || "");
+  const otherParticipant =
+    activeConversation?.participants?.find((p: any) => {
+      const pId = String(p?._id || p?.id || p || "");
+      return pId && pId !== currentUserId;
+    }) || activeConversation?.participants?.[0];
 
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-50 relative overflow-hidden">
       {/* 1. Chat Header */}
       <div className="p-3 sm:p-4 border-b border-slate-200 bg-white flex items-center justify-between shrink-0 shadow-2xs z-10">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-teal-100 border border-teal-200 flex items-center justify-center text-[#00636b] font-bold text-sm shrink-0 overflow-hidden">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          {/* Mobile Back Button (Facebook Messenger Style) */}
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="lg:hidden p-2 -ml-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full transition shrink-0"
+              title="কথোপকথন তালিকায় ফিরে যান"
+              aria-label="Back to conversations"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+          )}
+
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-teal-100 border border-teal-200 flex items-center justify-center text-[#00636b] font-bold text-sm shrink-0 overflow-hidden">
             {otherParticipant?.avatarUrl ? (
               <img
                 src={otherParticipant.avatarUrl}
@@ -180,15 +219,15 @@ export function ChatConversationView({
             )}
           </div>
           <div className="min-w-0">
-            <h4 className="font-bold text-slate-900 text-sm truncate">
+            <h4 className="font-bold text-slate-900 text-xs sm:text-sm truncate">
               {otherParticipant?.fullName || "ব্যবহারকারী"}
             </h4>
-            <div className="flex items-center gap-2 text-xs text-slate-500">
+            <div className="flex items-center gap-2 text-[11px] sm:text-xs text-slate-500">
               <Badge variant="outline" className="text-[10px] py-0 px-1.5 uppercase">
                 {otherParticipant?.role || "সদস্য"}
               </Badge>
               {otherParticipant?.phone && (
-                <span className="hidden sm:inline font-mono text-[11px] text-slate-400">
+                <span className="font-mono text-[11px] text-slate-500">
                   {otherParticipant.phone}
                 </span>
               )}
@@ -196,19 +235,83 @@ export function ChatConversationView({
           </div>
         </div>
 
-        {/* Delete Conversation action button */}
-        <div className="flex items-center gap-1.5">
+        {/* Action button & 3-dot options menu */}
+        <div className="flex items-center gap-1 relative" ref={headerMenuRef}>
+          {/* Desktop Close Button */}
+          {(onCloseConversation || onBack) && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (onCloseConversation) onCloseConversation();
+                else if (onBack) onBack();
+              }}
+              className="hidden sm:inline-flex text-slate-500 hover:text-slate-800 hover:bg-slate-100 text-xs gap-1"
+              title="কথোপকথন বন্ধ করুন"
+            >
+              <X className="h-3.5 w-3.5" />
+              <span>বন্ধ করুন</span>
+            </Button>
+          )}
+
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => setShowDeleteConvModal(true)}
-            className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 text-xs gap-1"
+            className="hidden sm:inline-flex text-slate-400 hover:text-rose-600 hover:bg-rose-50 text-xs gap-1"
             title="ইনবক্স থেকে এই কথোপকথনটি মুছে ফেলুন"
           >
             <Trash2 className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">চ্যাট মুছুন</span>
+            <span>চ্যাট মুছুন</span>
           </Button>
+
+          {/* 3-Dot Dropdown Trigger */}
+          <button
+            type="button"
+            onClick={() => setHeaderMenuOpen((prev) => !prev)}
+            className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition"
+            title="অতিরিক্ত অপশন"
+            aria-label="More options"
+          >
+            <MoreVertical className="h-4 w-4" />
+          </button>
+
+          {/* 3-Dot Dropdown Menu */}
+          {headerMenuOpen && (
+            <div className="absolute right-0 top-full mt-1.5 w-48 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100 divide-y divide-slate-100">
+              {(onCloseConversation || onBack) && (
+                <div className="py-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHeaderMenuOpen(false);
+                      if (onCloseConversation) onCloseConversation();
+                      else if (onBack) onBack();
+                    }}
+                    className="w-full px-3.5 py-2 text-left text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium transition"
+                  >
+                    <X className="h-3.5 w-3.5 text-slate-500" />
+                    <span>কথোপকথন বন্ধ করুন</span>
+                  </button>
+                </div>
+              )}
+              <div className="py-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHeaderMenuOpen(false);
+                    setShowDeleteConvModal(true);
+                  }}
+                  className="w-full px-3.5 py-2 text-left text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2 font-medium transition"
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-rose-500" />
+                  <span>কথোপকথন মুছে ফেলুন</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -252,7 +355,8 @@ export function ChatConversationView({
           </div>
         ) : (
           messages.map((msg, index) => {
-            const isMe = msg.sender?._id === currentUser?.id || msg.sender === currentUser?.id;
+            const msgSenderId = String(msg.sender?._id || msg.sender?.id || msg.sender || "");
+            const isMe = Boolean(currentUserId && msgSenderId && currentUserId === msgSenderId);
             const parsedParts = parseSafeMessageText(msg.text);
 
             // Date Grouping check (FB Messenger style)
@@ -334,7 +438,7 @@ export function ChatConversationView({
                             <button
                               type="button"
                               disabled={savingEdit || !editingText.trim()}
-                              onClick={() => handleSaveEdit(msg._id)}
+                              onClick={handleSaveEdit}
                               className="px-2 py-0.5 rounded text-[11px] bg-teal-600 hover:bg-teal-700 text-white font-medium transition"
                             >
                               {savingEdit ? "সংরক্ষণ হচ্ছে..." : "সংরক্ষণ"}
@@ -393,22 +497,22 @@ export function ChatConversationView({
 
                     {/* Seen Status (Only on sender side) */}
                     {isMe && !msg.isDeleted && (
-                      <span className="flex items-center gap-0.5 font-medium">
+                      <span className="flex items-center gap-0.5 font-medium text-[10px]">
                         {msg.status === "read" || (msg.readBy && msg.readBy.length > 1) ? (
                           <span
                             className="text-emerald-700 font-semibold flex items-center gap-0.5"
                             title="প্রাপক বার্তাটি পড়েছেন"
                           >
-                            <CheckCheck className="h-3 w-3 text-emerald-600" />
+                            <CheckCheck className="h-3.5 w-3.5 text-emerald-600" />
                             <span>দেখা হয়েছে</span>
                           </span>
                         ) : (
                           <span
                             className="text-slate-400 flex items-center gap-0.5"
-                            title="বার্তা সফলভাবে প্রেরিত"
+                            title="প্রাপক এখনো বার্তাটি পড়েননি"
                           >
-                            <Check className="h-3 w-3" />
-                            <span>প্রেরিত</span>
+                            <Check className="h-3 w-3 text-slate-400" />
+                            <span>অপঠিত</span>
                           </span>
                         )}
                       </span>
@@ -416,7 +520,7 @@ export function ChatConversationView({
 
                     {/* Action Controls for User's own message: Edit (within 24h) and Delete */}
                     {isMe && !msg.isDeleted && (
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 ml-1">
+                      <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center gap-1 ml-1">
                         {isEditable && (
                           <button
                             type="button"
@@ -424,7 +528,7 @@ export function ChatConversationView({
                               setEditingMessageId(msg._id);
                               setEditingText(msg.text);
                             }}
-                            className="p-1 text-slate-400 hover:text-teal-700 transition"
+                            className="p-1 text-slate-500 sm:text-slate-400 hover:text-teal-700 transition"
                             title="বার্তা এডিট করুন (১ দিনের মধ্যে)"
                           >
                             <Edit2 className="h-3 w-3" />
@@ -437,10 +541,10 @@ export function ChatConversationView({
                               onDeleteMessage(msg._id);
                             }
                           }}
-                          className="p-1 text-slate-400 hover:text-rose-600 transition"
+                          className="p-1 text-rose-500 sm:text-slate-400 hover:text-rose-600 active:scale-95 transition"
                           title="বার্তা মুছুন"
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <Trash2 className="h-3.5 w-3.5 sm:h-3 sm:w-3" />
                         </button>
                       </div>
                     )}
