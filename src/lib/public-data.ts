@@ -7,6 +7,7 @@ import { BlogPost } from "@/models/BlogPost";
 import { Event } from "@/models/Event";
 import { Batch } from "@/models/Batch";
 import { AcademicSession } from "@/models/AcademicSession";
+import { User } from "@/models/User";
 
 /**
  * Public Data Layer: Direct MongoDB queries for Next.js App Router Server Components
@@ -146,23 +147,37 @@ export async function getNoticeById(idOrSlug: string) {
       decoded = idOrSlug;
     }
 
-    const orConditions: any[] = [];
-    if (mongoose.Types.ObjectId.isValid(idOrSlug)) {
-      orConditions.push({ _id: new mongoose.Types.ObjectId(idOrSlug) });
-      orConditions.push({ _id: idOrSlug });
-    }
-    orConditions.push({ slug: decoded });
-    orConditions.push({ slug: idOrSlug });
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(idOrSlug);
+    let notice = null;
 
-    const notice = await Notice.findOne({
-      $or: orConditions,
-      status: { $ne: "archived" },
-    })
-      .populate("author", "fullName role")
-      .lean();
+    if (isObjectId) {
+      notice = await Notice.findOne({
+        _id: idOrSlug,
+        status: { $ne: "archived" },
+      })
+        .populate("author", "fullName role")
+        .lean();
+    }
+
+    if (!notice) {
+      notice = await Notice.findOne({
+        slug: { $in: [decoded, idOrSlug] },
+        status: { $ne: "archived" },
+      })
+        .populate("author", "fullName role")
+        .lean();
+    }
+
+    // Direct ID fallback without status filter
+    if (!notice && isObjectId) {
+      notice = await Notice.findById(idOrSlug)
+        .populate("author", "fullName role")
+        .lean();
+    }
 
     return notice ? JSON.parse(JSON.stringify(notice)) : null;
   } catch (error) {
+    console.error("Error in getNoticeById:", error);
     return null;
   }
 }

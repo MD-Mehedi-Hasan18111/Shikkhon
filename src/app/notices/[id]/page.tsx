@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: PageProps) {
 
   return {
     title: `${notice.title} | নোটিশ বোর্ড | শিক্ষণ একাডেমিক কেয়ার`,
-    description: notice.summary || notice.content.slice(0, 160),
+    description: notice.summary || (notice.content ? notice.content.slice(0, 160) : ""),
   };
 }
 
@@ -141,7 +141,7 @@ export default async function NoticeDetailPage({ params }: PageProps) {
                     )}
 
                     {/* Full Notice Content */}
-                    {/<[a-z][\s\S]*>/i.test(notice.content) ? (
+                    {/<[a-z][\s\S]*>/i.test(notice.content || "") ? (
                       <div
                         className="prose prose-slate max-w-none text-slate-700 leading-relaxed text-base space-y-4"
                         dangerouslySetInnerHTML={{ __html: notice.content }}

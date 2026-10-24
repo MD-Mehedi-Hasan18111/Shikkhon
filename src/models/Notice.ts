@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { INotice } from "@/types/database";
 import { generateSlug, defaultSchemaOptions } from "@/lib/db-utils";
+import "@/models/User";
 
 export interface INoticeDocument extends Omit<INotice, "_id">, Document {}
 

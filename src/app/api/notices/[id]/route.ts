@@ -23,11 +23,18 @@ export const GET = createApiHandler(
       session = null;
     }
 
-    // Query either by ObjectId or slug
+    // Query either by ObjectId or slug with seamless fallback
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(id);
-    const query = isObjectId ? { _id: id } : { slug: id };
+    let notice = null;
 
-    const notice = await Notice.findOne(query).populate("author", "fullName role").lean();
+    if (isObjectId) {
+      notice = await Notice.findOne({ _id: id }).populate("author", "fullName role").lean();
+    }
+
+    if (!notice) {
+      notice = await Notice.findOne({ slug: id }).populate("author", "fullName role").lean();
+    }
+
     if (!notice) {
       throw AppError.notFound("Notice not found", "নোটিশটি খুঁজে পাওয়া যায়নি।");
     }

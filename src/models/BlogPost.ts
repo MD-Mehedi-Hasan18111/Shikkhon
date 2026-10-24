@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { IBlogPost } from "@/types/database";
 import { generateSlug, defaultSchemaOptions } from "@/lib/db-utils";
+import "@/models/User";
 
 export interface IBlogPostDocument extends Omit<IBlogPost, "_id">, Document {}
 
