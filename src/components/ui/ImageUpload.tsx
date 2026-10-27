@@ -11,6 +11,7 @@ interface ImageUploadProps {
   onChange: (url: string) => void;
   folder?: "avatars" | "banners" | "general";
   aspectRatio?: "square" | "banner";
+  objectFit?: "cover" | "contain";
   label?: string;
   description?: string;
   className?: string;
@@ -22,6 +23,7 @@ export function ImageUpload({
   onChange,
   folder = "general",
   aspectRatio = "square",
+  objectFit = "cover",
   label,
   description,
   className,
@@ -135,7 +137,7 @@ export function ImageUpload({
               src={value}
               alt="Uploaded Preview"
               fill
-              className="object-cover"
+              className={objectFit === "contain" ? "object-contain p-2 bg-white" : "object-cover"}
               sizes={isSquare ? "120px" : "100vw"}
               unoptimized={value.startsWith("/uploads/") || value.startsWith("/images/") || value.includes("ibb.co")}
             />

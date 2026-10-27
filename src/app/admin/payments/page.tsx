@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   CreditCard,
   Search,
@@ -22,6 +23,7 @@ import {
   Calendar,
   Sparkles,
   Zap,
+  Scissors,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
@@ -127,6 +129,16 @@ interface SummaryData {
   dueCount: number;
 }
 
+interface SiteSettingsInfo {
+  institutionName: string;
+  shortName: string;
+  motto: string;
+  logoUrl: string;
+  address: string;
+  phones: string[];
+  email: string;
+}
+
 export default function AdminPaymentsPage() {
   const dispatch = useAppDispatch();
   const printRef = useRef<HTMLDivElement>(null);
@@ -159,6 +171,17 @@ export default function AdminPaymentsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // Site Settings for Receipts
+  const [siteSettings, setSiteSettings] = useState<SiteSettingsInfo>({
+    institutionName: "শিক্ষণ একাডেমিক কেয়ার",
+    shortName: "শিক্ষণ",
+    motto: "চলো সেরা হই...",
+    logoUrl: "/images/logo.png",
+    address: "এস ক্লাব মোড় (এর পশ্চিম পার্শ্বে), রোড-০২, বি-ব্লক, হালিশহর, চট্টগ্রাম",
+    phones: ["০১৯৮-২৭০৫৬৪৬", "০১৮৫৯-৭৮৭৩৯৯"],
+    email: "info@shikkhon.edu.bd",
+  });
 
   // Batches for filter & modal dropdown
   const [batchesList, setBatchesList] = useState<Array<{ _id: string; name: string; code: string; monthlyFee: number; classLevel: string }>>([]);
@@ -196,14 +219,33 @@ export default function AdminPaymentsPage() {
   // Modal 3: Receipt View / Print Modal
   const [receiptModalOpen, setReceiptModalOpen] = useState(false);
   const [selectedReceiptPayment, setSelectedReceiptPayment] = useState<PaymentItem | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
-  // Fetch batches
+  // Fetch batches & site settings
   useEffect(() => {
+    setIsMounted(true);
     fetch("/api/batches?status=active&limit=100")
       .then((r) => r.json())
       .then((json) => {
         if (json.success && json.data) {
           setBatchesList(json.data);
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/site-settings")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success && json.data) {
+          setSiteSettings({
+            institutionName: json.data.institutionName || "শিক্ষণ একাডেমিক কেয়ার",
+            shortName: json.data.shortName || "শিক্ষণ",
+            motto: json.data.motto || "চলো সেরা হই...",
+            logoUrl: json.data.logoUrl || "/images/logo.png",
+            address: json.data.address || "এস ক্লাব মোড় (এর পশ্চিম পার্শ্বে), রোড-০২, বি-ব্লক, হালিশহর, চট্টগ্রাম",
+            phones: json.data.phones?.length ? json.data.phones : ["০১৯৮-২৭০৫৬৪৬", "০১৮৫৯-৭৮৭৩৯৯"],
+            email: json.data.email || "info@shikkhon.edu.bd",
+          });
         }
       })
       .catch(() => {});
@@ -489,9 +531,14 @@ export default function AdminPaymentsPage() {
     }
   };
 
-  // Print Receipt Action
+  // Print Receipt Action - Direct native print
   const handlePrint = () => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "visible";
     window.print();
+    setTimeout(() => {
+      document.body.style.overflow = prevOverflow;
+    }, 500);
   };
 
   const calculatedPayable = Math.max(0, paymentForm.feeAmount - paymentForm.discountAmount);
@@ -1329,13 +1376,13 @@ export default function AdminPaymentsPage() {
         </div>
       </Dialog>
 
-      {/* DIALOG 3: Printable Money Receipt Modal */}
+      {/* DIALOG 3: Printable Dual Money Receipt Modal */}
       {selectedReceiptPayment && (
         <Dialog
           isOpen={receiptModalOpen}
           onClose={() => setReceiptModalOpen(false)}
-          title="মানি রসিদ (Money Receipt)"
-          size="md"
+          title="মানি রসিদ (Money Receipt - ২ কপি এক পৃষ্ঠায় প্রিন্ট)"
+          size="xl"
           footer={
             <>
               <Button
@@ -1346,103 +1393,326 @@ export default function AdminPaymentsPage() {
               </Button>
               <Button
                 onClick={handlePrint}
-                className="bg-[#00636b] hover:bg-[#004e54] text-white gap-1.5"
+                className="bg-[#00636b] hover:bg-[#004e54] text-white gap-1.5 shadow-xs"
               >
                 <Printer className="h-4 w-4" />
-                <span>প্রিন্ট করুন</span>
+                <span>প্রিন্ট করুন (Print Receipts)</span>
               </Button>
             </>
           }
         >
-          <div ref={printRef} className="p-4 border border-slate-200 rounded-xl bg-white space-y-4">
-            {/* Receipt Header */}
-            <div className="text-center pb-3 border-b border-slate-200">
-              <h3 className="text-lg font-bold text-slate-900">শিক্ষণ কোচিং ম্যানেজমেন্ট সিস্টেম</h3>
-              <p className="text-xs text-slate-500">অফিসিয়াল মাসিক ফি পরিশোধ রসিদ</p>
-              <div className="flex justify-between items-center text-[11px] text-slate-500 mt-2 font-mono">
-                <span>রসিদ নং: {selectedReceiptPayment.receiptNumber || "N/A"}</span>
-                <span>
-                  তারিখ: {formatBanglaDate(selectedReceiptPayment.paidAt || selectedReceiptPayment.createdAt)}
-                </span>
-              </div>
-            </div>
+          {(() => {
+            if (!selectedReceiptPayment) return null;
+            const isPaid = (selectedReceiptPayment.dueAmount || 0) <= 0;
 
-            {/* Student & Batch Info */}
-            <div className="grid grid-cols-2 gap-2 text-xs py-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
-              <div>
-                <span className="text-slate-400">শিক্ষার্থীর নাম:</span>{" "}
-                <strong className="text-slate-800">{selectedReceiptPayment.student?.fullName}</strong>
-              </div>
-              <div>
-                <span className="text-slate-400">রোল / আইডি:</span>{" "}
-                <strong className="font-mono text-slate-800">
-                  {selectedReceiptPayment.student?.studentId}
-                </strong>
-              </div>
-              <div>
-                <span className="text-slate-400">মোবাইল:</span>{" "}
-                <strong className="text-slate-800">{selectedReceiptPayment.student?.phone}</strong>
-              </div>
-              <div>
-                <span className="text-slate-400">ব্যাচ:</span>{" "}
-                <strong className="text-slate-800">{selectedReceiptPayment.batch?.name}</strong>
-              </div>
-              <div>
-                <span className="text-slate-400">মাস ও বছর:</span>{" "}
-                <strong className="text-slate-800">
-                  {banglaMonths.find((m) => m.value === String(selectedReceiptPayment.month))?.label}{" "}
-                  {toBanglaNumber(selectedReceiptPayment.year)}
-                </strong>
-              </div>
-              <div>
-                <span className="text-slate-400">পদ্ধতি:</span>{" "}
-                <strong className="uppercase text-slate-800">
-                  {paymentMethodOptions.find((m) => m.value === selectedReceiptPayment.paymentMethod)
-                    ?.label || selectedReceiptPayment.paymentMethod}
-                </strong>
-              </div>
-            </div>
+            const renderReceiptCopy = (copyType: "office" | "student") => {
+              const isOffice = copyType === "office";
+              return (
+                <div
+                  key={copyType}
+                  className={`receipt-copy-card relative overflow-hidden border rounded-xl bg-white p-3.5 sm:p-4 text-xs transition ${
+                    isOffice
+                      ? "border-slate-300 shadow-2xs"
+                      : "border-teal-200/80 shadow-2xs"
+                  }`}
+                >
+                  {/* Official Watermark Seal Stamp */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0">
+                    <div
+                      className={`transform -rotate-12 border-3 sm:border-4 rounded-2xl p-1 shadow-xs transition-opacity ${
+                        isPaid
+                          ? "border-emerald-600/35 bg-emerald-500/5 text-emerald-700"
+                          : "border-rose-600/35 bg-rose-500/5 text-rose-700"
+                      }`}
+                    >
+                      <div
+                        className={`border-2 rounded-xl px-6 py-2 flex flex-col items-center justify-center ${
+                          isPaid ? "border-emerald-600/30" : "border-rose-600/30"
+                        }`}
+                      >
+                        <div className="text-[10px] font-black tracking-widest uppercase opacity-80">
+                          {isPaid ? "★ সম্পূর্ণ পরিশোধিত ★" : "★ ফি বকেয়া রয়েছে ★"}
+                        </div>
+                        <div className="text-4xl font-black tracking-widest font-mono my-0.5 leading-none opacity-90">
+                          {isPaid ? "PAID" : "DUE"}
+                        </div>
+                        <div className="text-[9px] font-bold tracking-wider uppercase opacity-80">
+                          {isPaid
+                            ? `${siteSettings.shortName || "SHIKKHON"} • OFFICIAL SEAL`
+                            : `অবশিষ্ট বকেয়া: ৳${toBanglaNumber(selectedReceiptPayment.dueAmount)}`}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-            {/* Financial Details */}
-            <div className="space-y-1.5 text-xs pt-1">
-              <div className="flex justify-between text-slate-600">
-                <span>মাসিক টিউশন ফি:</span>
-                <span>৳{toBanglaNumber(selectedReceiptPayment.feeAmount)}</span>
-              </div>
-              {selectedReceiptPayment.discountAmount > 0 && (
-                <div className="flex justify-between text-emerald-600">
-                  <span>ডিসকাউন্ট / ছাড়:</span>
-                  <span>- ৳{toBanglaNumber(selectedReceiptPayment.discountAmount)}</span>
+                  {/* Relative Content Layer */}
+                  <div className="relative z-10 space-y-2">
+                    {/* Top Header */}
+                    <div className="flex items-start justify-between gap-3 pb-2 border-b border-slate-200">
+                      <div className="flex items-center gap-3">
+                        <div className="relative h-11 w-11 shrink-0 rounded-lg overflow-hidden border border-slate-200 bg-white flex items-center justify-center p-1 shadow-2xs">
+                          <img
+                            src={siteSettings.logoUrl || "/images/logo.png"}
+                            alt={siteSettings.institutionName}
+                            className="max-h-full max-w-full object-contain"
+                            loading="eager"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).src = "/images/logo.png";
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <h3 className="text-sm sm:text-base font-extrabold text-slate-900 leading-snug">
+                            {siteSettings.institutionName}
+                          </h3>
+                          {siteSettings.motto && (
+                            <p className="text-[10px] font-semibold text-[#00636b] leading-tight mt-0.5">
+                              {siteSettings.motto}
+                            </p>
+                          )}
+                          <p className="text-[9.5px] text-slate-500 leading-tight mt-0.5">
+                            {siteSettings.address}
+                            {siteSettings.phones?.length ? ` | হেল্পলাইন: ${siteSettings.phones.join(", ")}` : ""}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span
+                          className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ${
+                            isOffice
+                              ? "bg-slate-800 text-white"
+                              : "bg-[#00636b] text-white"
+                          }`}
+                        >
+                          {isOffice ? "কোচিং / অফিস কপি" : "শিক্ষার্থী কপি"}
+                        </span>
+                        <p className="text-[11px] font-bold text-slate-700 mt-1">
+                          মানি রসিদ (Money Receipt)
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Receipt Meta Bar */}
+                    <div className="flex items-center justify-between text-[11px] bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200 text-slate-700">
+                      <span>
+                        <span className="text-slate-500 font-normal">রসিদ নং:</span>{" "}
+                        <strong className="font-mono text-slate-900">
+                          {selectedReceiptPayment.receiptNumber ||
+                            `RCP-${selectedReceiptPayment._id.slice(-6).toUpperCase()}`}
+                        </strong>
+                      </span>
+                      <span>
+                        <span className="text-slate-500 font-normal">তারিখ:</span>{" "}
+                        <strong className="text-slate-900">
+                          {formatBanglaDate(selectedReceiptPayment.paidAt || selectedReceiptPayment.createdAt)}
+                        </strong>
+                      </span>
+                    </div>
+
+                    {/* Student & Batch Information */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs py-1.5 px-2.5 rounded-lg bg-slate-50/70 border border-slate-100">
+                      <div>
+                        <span className="text-slate-400 text-[10px] block">শিক্ষার্থীর নাম</span>
+                        <strong className="text-slate-900 text-xs block truncate">
+                          {selectedReceiptPayment.student?.fullName}
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 text-[10px] block">রোল / আইডি</span>
+                        <strong className="font-mono text-slate-900 text-xs block">
+                          {selectedReceiptPayment.student?.studentId}
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 text-[10px] block">মোবাইল</span>
+                        <strong className="text-slate-900 text-xs block">
+                          {selectedReceiptPayment.student?.phone}
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 text-[10px] block">ব্যাচ ও শ্রেণি</span>
+                        <strong className="text-slate-900 text-xs block truncate">
+                          {selectedReceiptPayment.batch?.name}
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 text-[10px] block">ফি মাস ও বছর</span>
+                        <strong className="text-slate-900 text-xs block">
+                          {banglaMonths.find((m) => m.value === String(selectedReceiptPayment.month))?.label}{" "}
+                          {toBanglaNumber(selectedReceiptPayment.year)}
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 text-[10px] block">পদ্ধতি ও TrxID</span>
+                        <strong className="text-slate-900 text-xs block truncate uppercase">
+                          {paymentMethodOptions.find((m) => m.value === selectedReceiptPayment.paymentMethod)?.label || selectedReceiptPayment.paymentMethod}
+                          {selectedReceiptPayment.transactionId ? ` (${selectedReceiptPayment.transactionId})` : ""}
+                        </strong>
+                      </div>
+                    </div>
+
+                    {/* Financial Table */}
+                    <div className="border border-slate-200 rounded-lg overflow-hidden text-xs">
+                      <div className="grid grid-cols-4 bg-slate-100/90 text-[10px] font-bold text-slate-600 px-3 py-1 uppercase tracking-wide border-b border-slate-200">
+                        <div className="col-span-2">বিবরণ (Description)</div>
+                        <div className="text-right">ছাড় (Discount)</div>
+                        <div className="text-right">মোট টাকা (Amount)</div>
+                      </div>
+                      <div className="divide-y divide-slate-100">
+                        <div className="grid grid-cols-4 px-3 py-1.5 text-slate-700">
+                          <div className="col-span-2 font-medium">
+                            মাসিক টিউশন ফি ({banglaMonths.find((m) => m.value === String(selectedReceiptPayment.month))?.label} {toBanglaNumber(selectedReceiptPayment.year)})
+                          </div>
+                          <div className="text-right text-emerald-600 font-semibold">
+                            {selectedReceiptPayment.discountAmount > 0
+                              ? `- ৳${toBanglaNumber(selectedReceiptPayment.discountAmount)}`
+                              : "—"}
+                          </div>
+                          <div className="text-right font-semibold">
+                            ৳{toBanglaNumber(selectedReceiptPayment.feeAmount)}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-slate-50/90 px-3 py-1.5 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="text-slate-500 text-[11px]">
+                            ধার্যকৃত মোট: <strong>৳{toBanglaNumber(selectedReceiptPayment.payableAmount)}</strong>
+                          </span>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                              isPaid
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-rose-100 text-rose-800"
+                            }`}
+                          >
+                            {isPaid
+                              ? "সম্পূর্ণ পরিশোধিত (PAID)"
+                              : `বকেয়া: ৳${toBanglaNumber(selectedReceiptPayment.dueAmount)}`}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-slate-600 mr-2 text-[11px]">পরিশোধিত টাকা:</span>
+                          <strong className="text-sm font-extrabold text-[#00636b]">
+                            ৳{toBanglaNumber(selectedReceiptPayment.paidAmount)}
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Signatures */}
+                    <div className="pt-5 pb-0.5 flex justify-between items-end text-[10px] text-slate-500">
+                      <div className="text-center">
+                        <div className="border-t border-slate-300 pt-1 w-28 sm:w-32">
+                          শিক্ষার্থী / অভিভাবকের স্বাক্ষর
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className="border-t border-slate-300 pt-1 w-32 sm:w-36 font-medium text-slate-700">
+                          কর্তৃপক্ষের স্বাক্ষর ও সিল
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              )}
-              <div className="flex justify-between font-bold text-slate-900 pt-1 border-t border-slate-100">
-                <span>পরিশোধযোগ্য মোট:</span>
-                <span>৳{toBanglaNumber(selectedReceiptPayment.payableAmount)}</span>
-              </div>
-              <div className="flex justify-between font-bold text-teal-800 text-sm pt-1 border-t border-slate-200">
-                <span>পরিশোধিত টাকা:</span>
-                <span>৳{toBanglaNumber(selectedReceiptPayment.paidAmount)}</span>
-              </div>
-              <div className="flex justify-between font-bold text-rose-600 pt-1 border-t border-slate-100">
-                <span>অবশিষ্ট বকেয়া:</span>
-                <span>
-                  {selectedReceiptPayment.dueAmount > 0
-                    ? `৳${toBanglaNumber(selectedReceiptPayment.dueAmount)}`
-                    : "পরিশোধিত"}
-                </span>
-              </div>
-            </div>
+              );
+            };
 
-            {/* Receipt Footer */}
-            <div className="pt-8 flex justify-between items-end text-[10px] text-slate-400 border-t border-slate-200">
-              <div className="text-center">
-                <div className="border-t border-slate-300 pt-1 w-24">শিক্ষার্থী স্বাক্ষর</div>
+            const fullReceiptLayout = (
+              <div className="space-y-2 bg-white w-full">
+                {/* Copy 1: Coaching / Office Copy */}
+                {renderReceiptCopy("office")}
+
+                {/* Cut Separator Line */}
+                <div className="receipt-cut-line my-2 flex items-center justify-center gap-2 select-none py-1">
+                  <div className="flex-1 border-t-2 border-dashed border-slate-300" />
+                  <span className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500 bg-slate-100 px-3 py-0.5 rounded-full border border-slate-300 shadow-2xs">
+                    <Scissors className="h-3.5 w-3.5 text-slate-500 rotate-90" />
+                    <span>এখান থেকে কেটে শিক্ষার্থীকে প্রদান করুন (Cut along this line)</span>
+                    <Scissors className="h-3.5 w-3.5 text-slate-500 -rotate-90" />
+                  </span>
+                  <div className="flex-1 border-t-2 border-dashed border-slate-300" />
+                </div>
+
+                {/* Copy 2: Student Copy */}
+                {renderReceiptCopy("student")}
               </div>
-              <div className="text-center">
-                <div className="border-t border-slate-300 pt-1 w-28">কর্তৃপক্ষের স্বাক্ষর ও সিল</div>
+            );
+
+            return (
+              <div className="space-y-3">
+                {/* On-screen Preview */}
+                {fullReceiptLayout}
+
+                {/* Direct Body Portal for clean, 100% unclipped, non-blank A4 Print */}
+                {isMounted && typeof document !== "undefined" && createPortal(
+                  <div id="coaching-print-receipt-root" className="hidden print:block">
+                    {fullReceiptLayout}
+                  </div>,
+                  document.body
+                )}
+
+                {/* Print Stylesheet */}
+                <style jsx global>{`
+                  @media screen {
+                    #coaching-print-receipt-root {
+                      display: none !important;
+                    }
+                  }
+                  @media print {
+                    @page {
+                      size: A4 portrait;
+                      margin: 6mm 10mm;
+                    }
+                    * {
+                      -webkit-print-color-adjust: exact !important;
+                      print-color-adjust: exact !important;
+                      color-adjust: exact !important;
+                      box-sizing: border-box !important;
+                    }
+                    html, body {
+                      overflow: visible !important;
+                      height: auto !important;
+                      background: #ffffff !important;
+                      margin: 0 !important;
+                      padding: 0 !important;
+                      width: 100% !important;
+                    }
+                    /* Hide everything else on the page */
+                    body > *:not(#coaching-print-receipt-root) {
+                      display: none !important;
+                    }
+                    /* Show only the direct body portal */
+                    #coaching-print-receipt-root {
+                      display: block !important;
+                      position: static !important;
+                      width: 100% !important;
+                      max-width: 100% !important;
+                      margin: 0 auto !important;
+                      padding: 0 !important;
+                      background: #ffffff !important;
+                    }
+                    .receipt-copy-card {
+                      border: 1.5px solid #cbd5e1 !important;
+                      border-radius: 10px !important;
+                      page-break-inside: avoid !important;
+                      break-inside: avoid !important;
+                      background: #ffffff !important;
+                      position: relative !important;
+                      overflow: hidden !important;
+                      box-shadow: none !important;
+                      margin-bottom: 4px !important;
+                    }
+                    .receipt-cut-line {
+                      margin: 6px 0 !important;
+                      page-break-inside: avoid !important;
+                      break-inside: avoid !important;
+                    }
+                  }
+                `}</style>
               </div>
-            </div>
-          </div>
+            );
+          })()}
         </Dialog>
       )}
     </div>

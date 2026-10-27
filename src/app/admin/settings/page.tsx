@@ -27,6 +27,7 @@ interface SiteSettingsData {
   institutionName: string;
   shortName: string;
   motto: string;
+  logoUrl?: string;
   bannerUrl: string;
   phones: string[];
   email: string;
@@ -62,6 +63,7 @@ export default function SiteSettingsManagementPage() {
     institutionName: "শিক্ষণ একাডেমিক কেয়ার",
     shortName: "শিক্ষণ",
     motto: "চলো সেরা হই...",
+    logoUrl: "/images/logo.png",
     bannerUrl: "/images/banner.png",
     phones: ["০১৯৮-২৭০৫৬৪৬", "০১৮৫৯-৭৮৭৩৯৯"],
     email: "info@shikkhon.edu.bd",
@@ -105,6 +107,7 @@ export default function SiteSettingsManagementPage() {
           institutionName: json.data.institutionName || "",
           shortName: json.data.shortName || "",
           motto: json.data.motto || "",
+          logoUrl: json.data.logoUrl || "/images/logo.png",
           bannerUrl: json.data.bannerUrl || "/images/banner.png",
           phones: json.data.phones || [],
           email: json.data.email || "",
@@ -273,6 +276,44 @@ export default function SiteSettingsManagementPage() {
                   />
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Section 1.2: Institution Logo Changer */}
+          <Card className="shadow-xs border-slate-200">
+            <CardHeader className="pb-3 border-b border-slate-100">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                  <Building className="h-4 w-4 text-[#00636b]" />
+                  <span>প্রতিষ্ঠানের লোগো পরিবর্তন (Logo Changer)</span>
+                </CardTitle>
+                {formData.logoUrl && formData.logoUrl !== "/images/logo.png" && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setFormData({ ...formData, logoUrl: "/images/logo.png" })
+                    }
+                    className="text-xs h-7 text-slate-600 border-slate-200 hover:bg-slate-50"
+                  >
+                    ডিফল্ট লোগোতে ফিরুন
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-3">
+              <ImageUpload
+                value={formData.logoUrl}
+                onChange={(url) =>
+                  setFormData({ ...formData, logoUrl: url || "/images/logo.png" })
+                }
+                folder="general"
+                aspectRatio="square"
+                objectFit="contain"
+                label="কোচিং এর প্রধান অফিসিয়াল লোগো"
+                description="মানি রসিদ (Money Receipt), ড্যাশবোর্ড হেডার ও পাবলিক ওয়েবসাইটে প্রদর্শিত অফিসিয়াল লোগো। স্বচ্ছ ব্যাকগ্রাউন্ডের PNG বা বর্গাকার লোগো ছবি আপলোড করুন।"
+              />
             </CardContent>
           </Card>
 
