@@ -28,6 +28,7 @@ import {
   TableCell,
 } from "@/components/ui/Table";
 import { Pagination } from "@/components/ui/Pagination";
+import { ActionDropdown } from "@/components/ui/ActionDropdown";
 import { Alert } from "@/components/ui/Alert";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAppDispatch } from "@/store";
@@ -225,6 +226,24 @@ export default function EnrollmentManagementPage() {
     }
   };
 
+  const getEnrollmentActionItems = (enr: EnrollmentItem) => [
+    {
+      label: "ব্যাচ স্থানান্তর",
+      icon: <ArrowRightLeft className="h-4 w-4" />,
+      onClick: () => openTransferDialog(enr),
+      variant: "primary" as const,
+    },
+    {
+      label: "ভর্তি প্রত্যাহার করুন",
+      icon: <XCircle className="h-4 w-4" />,
+      onClick: () => {
+        setTargetEnrollment(enr);
+        setCancelDialogOpen(true);
+      },
+      variant: "danger" as const,
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -306,107 +325,161 @@ export default function EnrollmentManagementPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>শিক্ষার্থী আইডি ও নাম</TableHead>
-                  <TableHead>ব্যাচ ও শিক্ষাবর্ষ</TableHead>
-                  <TableHead>রোল নম্বর</TableHead>
-                  <TableHead>মাসিক ফি ও ছাড়</TableHead>
-                  <TableHead>ভর্তির তারিখ</TableHead>
-                  <TableHead>স্ট্যাটাস</TableHead>
-                  <TableHead className="text-right">কার্যক্রম</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {enrollments.map((enr) => (
-                  <TableRow key={enr._id} className="hover:bg-slate-50">
-                    <TableCell>
-                      <div className="font-semibold text-slate-900 text-sm">
-                        {enr.student?.fullName || "অজ্ঞাত"}
-                      </div>
-                      <div className="text-[11px] font-mono text-[#00636b]">
-                        আইডি: {enr.student?.studentId} • {enr.student?.phone}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-semibold text-slate-800 text-xs">
-                        {enr.batch?.name}
-                      </div>
-                      <div className="text-[11px] text-slate-400">
-                        সেশন: {enr.academicSession?.name}
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs font-bold text-slate-700">
-                      {enr.rollNumber || "নাই"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-xs font-medium text-slate-800">
-                        {formatBanglaCurrency(enr.batch?.monthlyFee || 0)}
-                      </div>
-                      {enr.feeDiscountPercent > 0 && (
-                        <div className="text-[10px] text-teal-600 font-bold">
-                          ছাড়: {toBanglaNumber(enr.feeDiscountPercent)}%
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-600">
-                      {formatBanglaDate(enr.enrollmentDate)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          enr.status === "active"
-                            ? "success"
-                            : enr.status === "transferred"
-                              ? "outline"
-                              : "secondary"
-                        }
-                        className="text-xs"
-                      >
-                        {enr.status === "active"
-                          ? "চলমান"
-                          : enr.status === "transferred"
-                            ? "স্থানান্তরিত"
-                            : enr.status === "cancelled"
-                              ? "বাতিল"
-                              : enr.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right space-x-1">
-                      {enr.status === "active" && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="xs"
-                            onClick={() => openTransferDialog(enr)}
-                            className="text-teal-600 hover:bg-teal-50"
-                            title="অন্য ব্যাচে স্থানান্তর করুন"
-                          >
-                            <ArrowRightLeft className="h-4 w-4 mr-1" />
-                            <span>স্থানান্তর</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="xs"
-                            onClick={() => {
-                              setTargetEnrollment(enr);
-                              setCancelDialogOpen(true);
-                            }}
-                            className="text-rose-600 hover:bg-rose-50"
-                            title="ভর্তি প্রত্যাহার করুন"
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
-                    </TableCell>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>শিক্ষার্থী আইডি ও নাম</TableHead>
+                    <TableHead>ব্যাচ ও শিক্ষাবর্ষ</TableHead>
+                    <TableHead>রোল নম্বর</TableHead>
+                    <TableHead>মাসিক ফি ও ছাড়</TableHead>
+                    <TableHead>ভর্তির তারিখ</TableHead>
+                    <TableHead>স্ট্যাটাস</TableHead>
+                    <TableHead className="text-right">কার্যক্রম</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {enrollments.map((enr) => (
+                    <TableRow key={enr._id} className="hover:bg-slate-50">
+                      <TableCell>
+                        <div className="font-semibold text-slate-900 text-sm">
+                          {enr.student?.fullName || "অজ্ঞাত"}
+                        </div>
+                        <div className="text-[11px] font-mono text-[#00636b]">
+                          আইডি: {enr.student?.studentId} • {enr.student?.phone}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-semibold text-slate-800 text-xs">
+                          {enr.batch?.name}
+                        </div>
+                        <div className="text-[11px] text-slate-400">
+                          সেশন: {enr.academicSession?.name}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs font-bold text-slate-700">
+                        {enr.rollNumber || "নাই"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-xs font-medium text-slate-800">
+                          {formatBanglaCurrency(enr.batch?.monthlyFee || 0)}
+                        </div>
+                        {enr.feeDiscountPercent > 0 && (
+                          <div className="text-[10px] text-teal-600 font-bold">
+                            ছাড়: {toBanglaNumber(enr.feeDiscountPercent)}%
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-600">
+                        {formatBanglaDate(enr.enrollmentDate)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            enr.status === "active"
+                              ? "success"
+                              : enr.status === "transferred"
+                                ? "outline"
+                                : "secondary"
+                          }
+                          className="text-xs"
+                        >
+                          {enr.status === "active"
+                            ? "চলমান"
+                            : enr.status === "transferred"
+                              ? "স্থানান্তরিত"
+                              : enr.status === "cancelled"
+                                ? "বাতিল"
+                                : enr.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {enr.status === "active" ? (
+                          <ActionDropdown
+                            ariaLabel="ভর্তি অ্যাকশন"
+                            items={getEnrollmentActionItems(enr)}
+                          />
+                        ) : (
+                          <span className="text-xs text-slate-400">—</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile Cards View */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {enrollments.map((enr) => (
+                <div key={enr._id} className="p-4 bg-white hover:bg-slate-50/60 transition space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-[#00636b] bg-teal-50 px-2 py-0.5 rounded">
+                          {enr.student?.studentId || "ID-N/A"}
+                        </span>
+                        <Badge
+                          variant={
+                            enr.status === "active"
+                              ? "success"
+                              : enr.status === "transferred"
+                                ? "outline"
+                                : "secondary"
+                          }
+                          className="text-[11px]"
+                        >
+                          {enr.status === "active"
+                            ? "চলমান"
+                            : enr.status === "transferred"
+                              ? "স্থানান্তরিত"
+                              : enr.status === "cancelled"
+                                ? "বাতিল"
+                                : enr.status}
+                        </Badge>
+                      </div>
+                      <h4 className="font-semibold text-slate-900 text-sm">
+                        {enr.student?.fullName || "অজ্ঞাত শিক্ষার্থী"}
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        মোবাইল: {enr.student?.phone || "নেই"} • ভর্তির তারিখ: {formatBanglaDate(enr.enrollmentDate)}
+                      </p>
+                    </div>
+                    {enr.status === "active" && (
+                      <ActionDropdown
+                        ariaLabel="ভর্তি অ্যাকশন"
+                        items={getEnrollmentActionItems(enr)}
+                      />
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-1.5 border-t border-slate-100">
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">ব্যাচ ও সেশন</span>
+                      <span className="text-slate-800 font-medium">{enr.batch?.name}</span>
+                      <p className="text-[11px] text-slate-400">সেশন: {enr.academicSession?.name}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">রোল ও ফি</span>
+                      <span className="text-slate-800 font-medium">
+                        রোল: <span className="font-mono font-bold">{enr.rollNumber || "নাই"}</span>
+                      </span>
+                      <p className="text-[11px] text-slate-500">
+                        ফি: {formatBanglaCurrency(enr.batch?.monthlyFee || 0)}
+                        {enr.feeDiscountPercent > 0 && (
+                          <span className="text-teal-600 font-bold ml-1">
+                            (ছাড়: {toBanglaNumber(enr.feeDiscountPercent)}%)
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         {/* Pagination */}

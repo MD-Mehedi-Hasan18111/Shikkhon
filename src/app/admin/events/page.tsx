@@ -30,6 +30,7 @@ import {
   TableCell,
 } from "@/components/ui/Table";
 import { Pagination } from "@/components/ui/Pagination";
+import { ActionDropdown } from "@/components/ui/ActionDropdown";
 import { Alert } from "@/components/ui/Alert";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAppDispatch } from "@/store";
@@ -233,6 +234,22 @@ export default function EventManagementPage() {
     }
   };
 
+  const getEventActionItems = (event: EventItem) => [
+    {
+      label: "তথ্য সম্পাদন",
+      icon: <Edit className="h-4 w-4" />,
+      onClick: () => openEditDialog(event),
+      variant: "warning" as const,
+    },
+    {
+      label: "ইভেন্ট বাতিল করুন",
+      icon: <Trash2 className="h-4 w-4" />,
+      onClick: () => handleCancelEvent(event._id),
+      variant: "danger" as const,
+      hidden: event.status !== "published",
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -278,94 +295,140 @@ export default function EventManagementPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ইভেন্টের নাম</TableHead>
-                  <TableHead>অনুষ্ঠানস্থল (Venue)</TableHead>
-                  <TableHead>তারিখ ও সময়</TableHead>
-                  <TableHead>ফিচার্ড</TableHead>
-                  <TableHead>স্ট্যাটাস</TableHead>
-                  <TableHead className="text-right">কার্যক্রম</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {events.map((event) => (
-                  <TableRow key={event._id} className="hover:bg-slate-50">
-                    <TableCell>
-                      <div className="font-semibold text-slate-900 text-sm">
-                        {event.title}
-                      </div>
-                      <p className="text-xs text-slate-500 mt-0.5 truncate max-w-sm">
-                        {event.description}
-                      </p>
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-700">
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3 text-slate-400 shrink-0" />
-                        <span className="truncate max-w-[200px]">{event.venue}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-600">
-                      {formatBanglaDate(event.startDate)}
-                    </TableCell>
-                    <TableCell>
-                      {event.isFeatured ? (
-                        <Badge variant="warning" className="text-xs">
-                          ফিচার্ড ইভেন্ট
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-slate-400">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          event.status === "published"
-                            ? "success"
-                            : event.status === "completed"
-                              ? "outline"
-                              : "secondary"
-                        }
-                        className="text-xs"
-                      >
-                        {event.status === "published"
-                          ? "আসন্ন/প্রকাশিত"
-                          : event.status === "completed"
-                            ? "সমাপ্ত"
-                            : event.status === "cancelled"
-                              ? "বাতিল"
-                              : "খসড়া"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={() => openEditDialog(event)}
-                        className="text-blue-600 hover:bg-blue-50"
-                        title="সম্পাদনা"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      {event.status === "published" && (
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          onClick={() => handleCancelEvent(event._id)}
-                          className="text-rose-600 hover:bg-rose-50"
-                          title="বাতিল করুন"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </TableCell>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ইভেন্টের নাম</TableHead>
+                    <TableHead>অনুষ্ঠানস্থল (Venue)</TableHead>
+                    <TableHead>তারিখ ও সময়</TableHead>
+                    <TableHead>ফিচার্ড</TableHead>
+                    <TableHead>স্ট্যাটাস</TableHead>
+                    <TableHead className="text-right">কার্যক্রম</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {events.map((event) => (
+                    <TableRow key={event._id} className="hover:bg-slate-50">
+                      <TableCell>
+                        <div className="font-semibold text-slate-900 text-sm">
+                          {event.title}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5 truncate max-w-sm">
+                          {event.description}
+                        </p>
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-700">
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3 text-slate-400 shrink-0" />
+                          <span className="truncate max-w-[200px]">{event.venue}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-600">
+                        {formatBanglaDate(event.startDate)}
+                      </TableCell>
+                      <TableCell>
+                        {event.isFeatured ? (
+                          <Badge variant="warning" className="text-xs">
+                            ফিচার্ড ইভেন্ট
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-slate-400">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            event.status === "published"
+                              ? "success"
+                              : event.status === "completed"
+                                ? "outline"
+                                : "secondary"
+                          }
+                          className="text-xs"
+                        >
+                          {event.status === "published"
+                            ? "আসন্ন/প্রকাশিত"
+                            : event.status === "completed"
+                              ? "সমাপ্ত"
+                              : event.status === "cancelled"
+                                ? "বাতিল"
+                                : "খসড়া"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <ActionDropdown
+                          ariaLabel="ইভেন্ট অ্যাকশন"
+                          items={getEventActionItems(event)}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile Cards View */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {events.map((event) => (
+                <div key={event._id} className="p-4 bg-white hover:bg-slate-50/60 transition space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {event.isFeatured && (
+                          <Badge variant="warning" className="text-[10px]">
+                            ফিচার্ড ইভেন্ট
+                          </Badge>
+                        )}
+                        <Badge
+                          variant={
+                            event.status === "published"
+                              ? "success"
+                              : event.status === "completed"
+                                ? "outline"
+                                : "secondary"
+                          }
+                          className="text-[10px]"
+                        >
+                          {event.status === "published"
+                            ? "আসন্ন/প্রকাশিত"
+                            : event.status === "completed"
+                              ? "সমাপ্ত"
+                              : event.status === "cancelled"
+                                ? "বাতিল"
+                                : "খসড়া"}
+                        </Badge>
+                      </div>
+                      <h4 className="font-semibold text-slate-900 text-sm">{event.title}</h4>
+                      {event.description && (
+                        <p className="text-xs text-slate-500 line-clamp-2">{event.description}</p>
+                      )}
+                    </div>
+                    <ActionDropdown
+                      ariaLabel="ইভেন্ট অ্যাকশন"
+                      items={getEventActionItems(event)}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-1.5 border-t border-slate-100">
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">অনুষ্ঠানস্থল (Venue)</span>
+                      <div className="flex items-center gap-1 text-slate-700 font-medium">
+                        <MapPin className="h-3 w-3 text-slate-400 shrink-0" />
+                        <span className="truncate">{event.venue}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">তারিখ ও সময়</span>
+                      <span className="text-slate-700 font-medium">{formatBanglaDate(event.startDate)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         {/* Pagination */}

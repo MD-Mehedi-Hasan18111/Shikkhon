@@ -32,6 +32,7 @@ import {
   TableCell,
 } from "@/components/ui/Table";
 import { Pagination } from "@/components/ui/Pagination";
+import { ActionDropdown } from "@/components/ui/ActionDropdown";
 import { Alert } from "@/components/ui/Alert";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAppDispatch } from "@/store";
@@ -235,6 +236,22 @@ export default function NoticeManagementPage() {
     }
   };
 
+  const getNoticeActionItems = (notice: NoticeItem) => [
+    {
+      label: "তথ্য সম্পাদন",
+      icon: <Edit className="h-4 w-4" />,
+      onClick: () => openEditDialog(notice),
+      variant: "warning" as const,
+    },
+    {
+      label: "আর্কাইভ করুন",
+      icon: <Archive className="h-4 w-4" />,
+      onClick: () => handleArchiveNotice(notice._id),
+      variant: "danger" as const,
+      hidden: notice.status === "archived",
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -317,38 +334,149 @@ export default function NoticeManagementPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>শিরোনাম</TableHead>
-                  <TableHead>দর্শনার্থী পরিধি (Visibility)</TableHead>
-                  <TableHead>অগ্রাধিকার</TableHead>
-                  <TableHead>প্রকাশের তারিখ</TableHead>
-                  <TableHead>স্ট্যাটাস</TableHead>
-                  <TableHead className="text-right">কার্যক্রম</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {notices.map((notice) => (
-                  <TableRow key={notice._id} className="hover:bg-slate-50">
-                    <TableCell>
-                      <div className="flex items-center gap-1.5">
-                        {notice.isPinned && (
-                          <Pin className="h-3.5 w-3.5 text-amber-600 fill-amber-600 shrink-0" />
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>শিরোনাম</TableHead>
+                    <TableHead>দর্শনার্থী পরিধি (Visibility)</TableHead>
+                    <TableHead>অগ্রাধিকার</TableHead>
+                    <TableHead>প্রকাশের তারিখ</TableHead>
+                    <TableHead>স্ট্যাটাস</TableHead>
+                    <TableHead className="text-right">কার্যক্রম</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {notices.map((notice) => (
+                    <TableRow key={notice._id} className="hover:bg-slate-50">
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          {notice.isPinned && (
+                            <Pin className="h-3.5 w-3.5 text-amber-600 fill-amber-600 shrink-0" />
+                          )}
+                          <span className="font-semibold text-slate-900 text-sm">
+                            {notice.title}
+                          </span>
+                        </div>
+                        {notice.summary && (
+                          <p className="text-xs text-slate-500 mt-0.5 truncate max-w-md">
+                            {notice.summary}
+                          </p>
                         )}
-                        <span className="font-semibold text-slate-900 text-sm">
-                          {notice.title}
-                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs font-normal">
+                          {notice.visibility === "public"
+                            ? "পাবলিক"
+                            : notice.visibility === "students"
+                              ? "শিক্ষার্থীবৃন্দ"
+                              : notice.visibility === "teachers"
+                                ? "শিক্ষকবৃন্দ"
+                                : "সকলের জন্য"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            notice.priority === "urgent"
+                              ? "danger"
+                              : notice.priority === "important"
+                                ? "warning"
+                                : "secondary"
+                          }
+                          className="text-xs"
+                        >
+                          {notice.priority === "urgent"
+                            ? "জরুরি"
+                            : notice.priority === "important"
+                              ? "গুরুত্বপূর্ণ"
+                              : "সাধারণ"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-600">
+                        {formatBanglaDate(notice.publishedAt)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={notice.status === "published" ? "success" : "secondary"}
+                          className="text-xs"
+                        >
+                          {notice.status === "published"
+                            ? "প্রকাশিত"
+                            : notice.status === "draft"
+                              ? "ড্রাফট"
+                              : "আর্কাইভকৃত"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <ActionDropdown
+                          ariaLabel="নোটিশ অ্যাকশন"
+                          items={getNoticeActionItems(notice)}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile Cards View */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {notices.map((notice) => (
+                <div key={notice._id} className="p-4 bg-white hover:bg-slate-50/60 transition space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {notice.isPinned && (
+                          <Badge variant="warning" className="text-[10px] gap-1 py-0.5">
+                            <Pin className="h-3 w-3 fill-amber-600" />
+                            <span>পিন করা</span>
+                          </Badge>
+                        )}
+                        <Badge
+                          variant={
+                            notice.priority === "urgent"
+                              ? "danger"
+                              : notice.priority === "important"
+                                ? "warning"
+                                : "secondary"
+                          }
+                          className="text-[10px]"
+                        >
+                          {notice.priority === "urgent"
+                            ? "জরুরি"
+                            : notice.priority === "important"
+                              ? "গুরুত্বপূর্ণ"
+                              : "সাধারণ"}
+                        </Badge>
+                        <Badge
+                          variant={notice.status === "published" ? "success" : "secondary"}
+                          className="text-[10px]"
+                        >
+                          {notice.status === "published"
+                            ? "প্রকাশিত"
+                            : notice.status === "draft"
+                              ? "ড্রাফট"
+                              : "আর্কাইভকৃত"}
+                        </Badge>
                       </div>
+                      <h4 className="font-semibold text-slate-900 text-sm">{notice.title}</h4>
                       {notice.summary && (
-                        <p className="text-xs text-slate-500 mt-0.5 truncate max-w-md">
-                          {notice.summary}
-                        </p>
+                        <p className="text-xs text-slate-500 line-clamp-2">{notice.summary}</p>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs font-normal">
+                    </div>
+                    <ActionDropdown
+                      ariaLabel="নোটিশ অ্যাকশন"
+                      items={getNoticeActionItems(notice)}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-1.5 border-t border-slate-100">
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">দর্শনার্থী পরিধি</span>
+                      <span className="text-slate-700 font-medium">
                         {notice.visibility === "public"
                           ? "পাবলিক"
                           : notice.visibility === "students"
@@ -356,68 +484,17 @@ export default function NoticeManagementPage() {
                             : notice.visibility === "teachers"
                               ? "শিক্ষকবৃন্দ"
                               : "সকলের জন্য"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          notice.priority === "urgent"
-                            ? "danger"
-                            : notice.priority === "important"
-                              ? "warning"
-                              : "secondary"
-                        }
-                        className="text-xs"
-                      >
-                        {notice.priority === "urgent"
-                          ? "জরুরি"
-                          : notice.priority === "important"
-                            ? "গুরুত্বপূর্ণ"
-                            : "সাধারণ"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-600">
-                      {formatBanglaDate(notice.publishedAt)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={notice.status === "published" ? "success" : "secondary"}
-                        className="text-xs"
-                      >
-                        {notice.status === "published"
-                          ? "প্রকাশিত"
-                          : notice.status === "draft"
-                            ? "ড্রাফট"
-                            : "আর্কাইভকৃত"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={() => openEditDialog(notice)}
-                        className="text-blue-600 hover:bg-blue-50"
-                        title="সম্পাদনা"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      {notice.status !== "archived" && (
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          onClick={() => handleArchiveNotice(notice._id)}
-                          className="text-amber-600 hover:bg-amber-50"
-                          title="আর্কাইভ"
-                        >
-                          <Archive className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">প্রকাশের তারিখ</span>
+                      <span className="text-slate-700 font-medium">{formatBanglaDate(notice.publishedAt)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         {/* Pagination */}

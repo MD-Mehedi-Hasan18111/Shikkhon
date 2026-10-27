@@ -26,6 +26,7 @@ import { Select } from "@/components/ui/Select";
 import { Alert } from "@/components/ui/Alert";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Dialog } from "@/components/ui/Dialog";
+import { ActionDropdown } from "@/components/ui/ActionDropdown";
 import { useAppDispatch } from "@/store";
 import { addNotification } from "@/store/slices/notificationSlice";
 import { toBanglaNumber, formatBanglaDate } from "@/lib/utils";
@@ -791,121 +792,197 @@ export default function AttendanceManagementPage() {
 
           {/* Table Container */}
           <Card className="overflow-hidden border-slate-200">
-            <div className="overflow-x-auto min-w-[750px]">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold">
-                    <th className="p-3 w-16 text-center">রোল নং</th>
-                    <th className="p-3">শিক্ষার্থীর নাম</th>
-                    <th className="p-3">মোবাইল নম্বর</th>
-                    <th className="p-3 text-center">উপস্থিতি স্ট্যাটাস (Status)</th>
-                    <th className="p-3 w-56">মন্তব্য (Remarks)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {sheetLoading ? (
-                    <tr>
-                      <td colSpan={5} className="p-6 text-center space-y-2">
-                        <Skeleton className="h-6 w-full" />
-                        <Skeleton className="h-6 w-full" />
-                        <Skeleton className="h-6 w-full" />
-                      </td>
-                    </tr>
-                  ) : studentRows.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="p-8 text-center text-slate-400">
-                        {selectedBatchId
-                          ? "এই ব্যাচে কোনো সক্রিয় ভর্তি পাওয়া যায়নি।"
-                          : "অনুগ্রহ করে একটি ব্যাচ নির্বাচন করুন।"}
-                      </td>
-                    </tr>
-                  ) : (
-                    studentRows.map((row) => (
-                      <tr key={row.studentId} className="hover:bg-slate-50/80 transition">
-                        <td className="p-3 text-center font-bold text-slate-800">
-                          {row.rollNumber ? toBanglaNumber(row.rollNumber) : "—"}
-                        </td>
-                        <td className="p-3">
-                          <p className="font-semibold text-slate-900">{row.fullName}</p>
-                          <p className="text-[11px] text-slate-400">
-                            আইডি: {row.studentId}
-                          </p>
-                        </td>
-                        <td className="p-3 text-slate-600 font-mono">
-                          {row.phone ? toBanglaNumber(row.phone) : "—"}
-                        </td>
-                        <td className="p-3 text-center">
-                          <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50 gap-1">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                updateIndividualStatus(row.studentId, "present")
-                              }
-                              className={`px-2.5 py-1 text-xs rounded-md font-semibold transition cursor-pointer ${
-                                row.status === "present"
-                                  ? "bg-emerald-600 text-white shadow-xs"
-                                  : "text-slate-600 hover:bg-slate-200/60"
-                              }`}
-                            >
-                              উপস্থিত
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                updateIndividualStatus(row.studentId, "late")
-                              }
-                              className={`px-2.5 py-1 text-xs rounded-md font-semibold transition cursor-pointer ${
-                                row.status === "late"
-                                  ? "bg-amber-500 text-white shadow-xs"
-                                  : "text-slate-600 hover:bg-slate-200/60"
-                              }`}
-                            >
-                              বিলম্ব
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                updateIndividualStatus(row.studentId, "absent")
-                              }
-                              className={`px-2.5 py-1 text-xs rounded-md font-semibold transition cursor-pointer ${
-                                row.status === "absent"
-                                  ? "bg-rose-600 text-white shadow-xs"
-                                  : "text-slate-600 hover:bg-slate-200/60"
-                              }`}
-                            >
-                              অনুপস্থিত
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                updateIndividualStatus(row.studentId, "excused")
-                              }
-                              className={`px-2.5 py-1 text-xs rounded-md font-semibold transition cursor-pointer ${
-                                row.status === "excused"
-                                  ? "bg-slate-700 text-white shadow-xs"
-                                  : "text-slate-600 hover:bg-slate-200/60"
-                              }`}
-                            >
-                              ছুটি
-                            </button>
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          <Input
-                            placeholder="প্রয়োজনীয় মন্তব্য..."
-                            value={row.remarks || ""}
-                            onChange={(e) =>
-                              updateIndividualRemarks(row.studentId, e.target.value)
-                            }
-                            className="h-8 text-xs"
-                          />
-                        </td>
+            {sheetLoading ? (
+              <div className="p-6 space-y-3">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : studentRows.length === 0 ? (
+              <div className="p-8 text-center text-slate-400">
+                {selectedBatchId
+                  ? "এই ব্যাচে কোনো সক্রিয় ভর্তি পাওয়া যায়নি।"
+                  : "অনুগ্রহ করে একটি ব্যাচ নির্বাচন করুন।"}
+              </div>
+            ) : (
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto min-w-[750px]">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold">
+                        <th className="p-3 w-16 text-center">রোল নং</th>
+                        <th className="p-3">শিক্ষার্থীর নাম</th>
+                        <th className="p-3">মোবাইল নম্বর</th>
+                        <th className="p-3 text-center">উপস্থিতি স্ট্যাটাস (Status)</th>
+                        <th className="p-3 w-56">মন্তব্য (Remarks)</th>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {studentRows.map((row) => (
+                        <tr key={row.studentId} className="hover:bg-slate-50/80 transition">
+                          <td className="p-3 text-center font-bold text-slate-800">
+                            {row.rollNumber ? toBanglaNumber(row.rollNumber) : "—"}
+                          </td>
+                          <td className="p-3">
+                            <p className="font-semibold text-slate-900">{row.fullName}</p>
+                            <p className="text-[11px] text-slate-400">
+                              আইডি: {row.studentId}
+                            </p>
+                          </td>
+                          <td className="p-3 text-slate-600 font-mono">
+                            {row.phone ? toBanglaNumber(row.phone) : "—"}
+                          </td>
+                          <td className="p-3 text-center">
+                            <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50 gap-1">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  updateIndividualStatus(row.studentId, "present")
+                                }
+                                className={`px-2.5 py-1 text-xs rounded-md font-semibold transition cursor-pointer ${
+                                  row.status === "present"
+                                    ? "bg-emerald-600 text-white shadow-xs"
+                                    : "text-slate-600 hover:bg-slate-200/60"
+                                }`}
+                              >
+                                উপস্থিত
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  updateIndividualStatus(row.studentId, "late")
+                                }
+                                className={`px-2.5 py-1 text-xs rounded-md font-semibold transition cursor-pointer ${
+                                  row.status === "late"
+                                    ? "bg-amber-500 text-white shadow-xs"
+                                    : "text-slate-600 hover:bg-slate-200/60"
+                                }`}
+                              >
+                                বিলম্ব
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  updateIndividualStatus(row.studentId, "absent")
+                                }
+                                className={`px-2.5 py-1 text-xs rounded-md font-semibold transition cursor-pointer ${
+                                  row.status === "absent"
+                                    ? "bg-rose-600 text-white shadow-xs"
+                                    : "text-slate-600 hover:bg-slate-200/60"
+                                }`}
+                              >
+                                অনুপস্থিত
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  updateIndividualStatus(row.studentId, "excused")
+                                }
+                                className={`px-2.5 py-1 text-xs rounded-md font-semibold transition cursor-pointer ${
+                                  row.status === "excused"
+                                    ? "bg-slate-700 text-white shadow-xs"
+                                    : "text-slate-600 hover:bg-slate-200/60"
+                                }`}
+                              >
+                                ছুটি
+                              </button>
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <Input
+                              placeholder="প্রয়োজনীয় মন্তব্য..."
+                              value={row.remarks || ""}
+                              onChange={(e) =>
+                                updateIndividualRemarks(row.studentId, e.target.value)
+                              }
+                              className="h-8 text-xs"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Cards View */}
+                <div className="md:hidden divide-y divide-slate-100">
+                  {studentRows.map((row) => (
+                    <div key={row.studentId} className="p-4 bg-white hover:bg-slate-50/60 transition space-y-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-[#00636b] bg-teal-50 px-2 py-0.5 rounded">
+                            {row.rollNumber ? `রোল: ${toBanglaNumber(row.rollNumber)}` : "রোল নাই"}
+                          </span>
+                          <span className="text-[11px] text-slate-400 font-mono">ID: {row.studentId}</span>
+                        </div>
+                        <h4 className="font-semibold text-slate-900 text-sm mt-1">{row.fullName}</h4>
+                        {row.phone && (
+                          <p className="text-[11px] text-slate-500 font-mono">{toBanglaNumber(row.phone)}</p>
+                        )}
+                      </div>
+
+                      {/* Status toggle buttons */}
+                      <div className="grid grid-cols-4 gap-1 p-1 bg-slate-100 rounded-lg">
+                        <button
+                          type="button"
+                          onClick={() => updateIndividualStatus(row.studentId, "present")}
+                          className={`py-1.5 text-xs rounded-md font-semibold transition text-center ${
+                            row.status === "present"
+                              ? "bg-emerald-600 text-white shadow-xs"
+                              : "text-slate-600 hover:bg-slate-200/60"
+                          }`}
+                        >
+                          উপস্থিত
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateIndividualStatus(row.studentId, "late")}
+                          className={`py-1.5 text-xs rounded-md font-semibold transition text-center ${
+                            row.status === "late"
+                              ? "bg-amber-500 text-white shadow-xs"
+                              : "text-slate-600 hover:bg-slate-200/60"
+                          }`}
+                        >
+                          বিলম্ব
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateIndividualStatus(row.studentId, "absent")}
+                          className={`py-1.5 text-xs rounded-md font-semibold transition text-center ${
+                            row.status === "absent"
+                              ? "bg-rose-600 text-white shadow-xs"
+                              : "text-slate-600 hover:bg-slate-200/60"
+                          }`}
+                        >
+                          অনুপস্থিত
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateIndividualStatus(row.studentId, "excused")}
+                          className={`py-1.5 text-xs rounded-md font-semibold transition text-center ${
+                            row.status === "excused"
+                              ? "bg-slate-700 text-white shadow-xs"
+                              : "text-slate-600 hover:bg-slate-200/60"
+                          }`}
+                        >
+                          ছুটি
+                        </button>
+                      </div>
+
+                      <div>
+                        <Input
+                          placeholder="প্রয়োজনীয় মন্তব্য..."
+                          value={row.remarks || ""}
+                          onChange={(e) => updateIndividualRemarks(row.studentId, e.target.value)}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
 
             {studentRows.length > 0 && (
               <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
@@ -968,82 +1045,134 @@ export default function AttendanceManagementPage() {
               </Button>
             </CardHeader>
 
-            <div className="overflow-x-auto min-w-[800px]">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold">
-                    <th className="p-3 w-16 text-center">রোল</th>
-                    <th className="p-3">শিক্ষার্থীর নাম</th>
-                    <th className="p-3 text-center">মোট ক্লাস</th>
-                    <th className="p-3 text-center text-emerald-700">উপস্থিত</th>
-                    <th className="p-3 text-center text-amber-700">বিলম্ব</th>
-                    <th className="p-3 text-center text-rose-700">অনুপস্থিত</th>
-                    <th className="p-3 text-center text-slate-600">ছুটি</th>
-                    <th className="p-3 text-center">উপস্থিতির শতকরা হার</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {summaryLoading ? (
-                    <tr>
-                      <td colSpan={8} className="p-6 text-center space-y-2">
-                        <Skeleton className="h-6 w-full" />
-                        <Skeleton className="h-6 w-full" />
-                        <Skeleton className="h-6 w-full" />
-                      </td>
-                    </tr>
-                  ) : batchSummaries.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="p-8 text-center text-slate-400">
-                        নির্বাচিত সময়কালের মধ্যে কোনো হাজিরার রেকর্ড পাওয়া যায়নি।
-                      </td>
-                    </tr>
-                  ) : (
-                    batchSummaries.map((item) => (
-                      <tr key={item.studentId} className="hover:bg-slate-50 transition">
-                        <td className="p-3 text-center font-bold text-slate-800">
-                          {item.rollNumber ? toBanglaNumber(item.rollNumber) : "—"}
-                        </td>
-                        <td className="p-3">
-                          <p className="font-semibold text-slate-900">{item.fullName}</p>
-                          <p className="text-[11px] text-slate-400">
-                            আইডি: {item.studentId}
-                          </p>
-                        </td>
-                        <td className="p-3 text-center font-semibold text-slate-800">
-                          {toBanglaNumber(item.totalClasses)}
-                        </td>
-                        <td className="p-3 text-center font-bold text-emerald-600 bg-emerald-50/30">
-                          {toBanglaNumber(item.present)}
-                        </td>
-                        <td className="p-3 text-center font-bold text-amber-600 bg-amber-50/30">
-                          {toBanglaNumber(item.late)}
-                        </td>
-                        <td className="p-3 text-center font-bold text-rose-600 bg-rose-50/30">
-                          {toBanglaNumber(item.absent)}
-                        </td>
-                        <td className="p-3 text-center font-medium text-slate-600">
-                          {toBanglaNumber(item.excused)}
-                        </td>
-                        <td className="p-3 text-center">
-                          <Badge
-                            variant={
-                              item.attendancePercentage >= 80
-                                ? "success"
-                                : item.attendancePercentage >= 65
-                                  ? "gold"
-                                  : "danger"
-                            }
-                            className="font-bold text-xs"
-                          >
-                            {toBanglaNumber(item.attendancePercentage)}%
-                          </Badge>
-                        </td>
+            {summaryLoading ? (
+              <div className="p-6 space-y-3">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : batchSummaries.length === 0 ? (
+              <div className="p-8 text-center text-slate-400">
+                নির্বাচিত সময়কালের মধ্যে কোনো হাজিরার রেকর্ড পাওয়া যায়নি।
+              </div>
+            ) : (
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto min-w-[800px]">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold">
+                        <th className="p-3 w-16 text-center">রোল</th>
+                        <th className="p-3">শিক্ষার্থীর নাম</th>
+                        <th className="p-3 text-center">মোট ক্লাস</th>
+                        <th className="p-3 text-center text-emerald-700">উপস্থিত</th>
+                        <th className="p-3 text-center text-amber-700">বিলম্ব</th>
+                        <th className="p-3 text-center text-rose-700">অনুপস্থিত</th>
+                        <th className="p-3 text-center text-slate-600">ছুটি</th>
+                        <th className="p-3 text-center">উপস্থিতির শতকরা হার</th>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {batchSummaries.map((item) => (
+                        <tr key={item.studentId} className="hover:bg-slate-50 transition">
+                          <td className="p-3 text-center font-bold text-slate-800">
+                            {item.rollNumber ? toBanglaNumber(item.rollNumber) : "—"}
+                          </td>
+                          <td className="p-3">
+                            <p className="font-semibold text-slate-900">{item.fullName}</p>
+                            <p className="text-[11px] text-slate-400">
+                              আইডি: {item.studentId}
+                            </p>
+                          </td>
+                          <td className="p-3 text-center font-semibold text-slate-800">
+                            {toBanglaNumber(item.totalClasses)}
+                          </td>
+                          <td className="p-3 text-center font-bold text-emerald-600 bg-emerald-50/30">
+                            {toBanglaNumber(item.present)}
+                          </td>
+                          <td className="p-3 text-center font-bold text-amber-600 bg-amber-50/30">
+                            {toBanglaNumber(item.late)}
+                          </td>
+                          <td className="p-3 text-center font-bold text-rose-600 bg-rose-50/30">
+                            {toBanglaNumber(item.absent)}
+                          </td>
+                          <td className="p-3 text-center font-medium text-slate-600">
+                            {toBanglaNumber(item.excused)}
+                          </td>
+                          <td className="p-3 text-center">
+                            <Badge
+                              variant={
+                                item.attendancePercentage >= 80
+                                  ? "success"
+                                  : item.attendancePercentage >= 65
+                                    ? "gold"
+                                    : "danger"
+                              }
+                              className="font-bold text-xs"
+                            >
+                              {toBanglaNumber(item.attendancePercentage)}%
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Cards View */}
+                <div className="md:hidden divide-y divide-slate-100">
+                  {batchSummaries.map((item) => (
+                    <div key={item.studentId} className="p-4 bg-white hover:bg-slate-50/60 transition space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-[#00636b] bg-teal-50 px-2 py-0.5 rounded">
+                              {item.rollNumber ? `রোল: ${toBanglaNumber(item.rollNumber)}` : "রোল নাই"}
+                            </span>
+                            <span className="text-[11px] text-slate-400 font-mono">ID: {item.studentId}</span>
+                          </div>
+                          <h4 className="font-semibold text-slate-900 text-sm mt-1">{item.fullName}</h4>
+                        </div>
+                        <Badge
+                          variant={
+                            item.attendancePercentage >= 80
+                              ? "success"
+                              : item.attendancePercentage >= 65
+                                ? "gold"
+                                : "danger"
+                          }
+                          className="font-bold text-xs"
+                        >
+                          {toBanglaNumber(item.attendancePercentage)}%
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-5 gap-1 text-center p-2 bg-slate-50 rounded-lg text-xs">
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">ক্লাস</span>
+                          <span className="font-semibold text-slate-800">{toBanglaNumber(item.totalClasses)}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">উপস্থিত</span>
+                          <span className="font-bold text-emerald-600">{toBanglaNumber(item.present)}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">বিলম্ব</span>
+                          <span className="font-bold text-amber-600">{toBanglaNumber(item.late)}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">অনুপস্থিত</span>
+                          <span className="font-bold text-rose-600">{toBanglaNumber(item.absent)}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">ছুটি</span>
+                          <span className="font-medium text-slate-600">{toBanglaNumber(item.excused)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </Card>
         </div>
       )}
@@ -1073,101 +1202,167 @@ export default function AttendanceManagementPage() {
           </div>
 
           <Card className="overflow-hidden border-slate-200">
-            <div className="overflow-x-auto min-w-[800px]">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold">
-                    <th className="p-3">তারিখ</th>
-                    <th className="p-3">শিক্ষার্থী</th>
-                    <th className="p-3">ব্যাচ</th>
-                    <th className="p-3 text-center">হাজিরা স্ট্যাটাস</th>
-                    <th className="p-3">লিপিবদ্ধকারী (Recorded By)</th>
-                    <th className="p-3">মন্তব্য</th>
-                    <th className="p-3 text-right">অ্যাকশন</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {historyLoading ? (
-                    <tr>
-                      <td colSpan={7} className="p-6 text-center space-y-2">
-                        <Skeleton className="h-6 w-full" />
-                        <Skeleton className="h-6 w-full" />
-                      </td>
-                    </tr>
-                  ) : historyRecords.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="p-8 text-center text-slate-400">
-                        কোনো অতীত হাজিরার রেকর্ড পাওয়া যায়নি।
-                      </td>
-                    </tr>
-                  ) : (
-                    historyRecords.map((rec) => (
-                      <tr key={rec._id} className="hover:bg-slate-50 transition">
-                        <td className="p-3 font-semibold text-slate-800">
-                          {formatBanglaDate(rec.classDate)}
-                        </td>
-                        <td className="p-3">
-                          <p className="font-semibold text-slate-900">
-                            {rec.student?.fullName}
-                          </p>
-                          <p className="text-[11px] text-slate-400">
-                            আইডি: {rec.student?.studentId}
-                          </p>
-                        </td>
-                        <td className="p-3 text-slate-600">{rec.batch?.name}</td>
-                        <td className="p-3 text-center">
-                          <Badge
-                            variant={
-                              rec.status === "present"
-                                ? "success"
-                                : rec.status === "late"
-                                  ? "gold"
-                                  : rec.status === "absent"
-                                    ? "danger"
-                                    : "default"
-                            }
-                          >
-                            {rec.status === "present"
-                              ? "উপস্থিত"
-                              : rec.status === "late"
-                                ? "বিলম্ব"
-                                : rec.status === "absent"
-                                  ? "অনুপস্থিত"
-                                  : "ছুটি"}
-                          </Badge>
-                        </td>
-                        <td className="p-3 text-slate-600">
-                          {rec.recordedBy?.fullName ? (
-                            <>
-                              <span className="font-medium text-slate-800">
-                                {rec.recordedBy.fullName}
-                              </span>
-                              <span className="block text-[10px] text-slate-400 capitalize">
-                                ({rec.recordedBy.role})
-                              </span>
-                            </>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td className="p-3 text-slate-500">{rec.remarks || "—"}</td>
-                        <td className="p-3 text-right">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openCorrectionModal(rec)}
-                            className="gap-1 text-xs"
-                          >
-                            <Edit2 className="h-3 w-3" />
-                            <span>সংশোধন</span>
-                          </Button>
-                        </td>
+            {historyLoading ? (
+              <div className="p-6 space-y-3">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : historyRecords.length === 0 ? (
+              <div className="p-8 text-center text-slate-400">
+                কোনো অতীত হাজিরার রেকর্ড পাওয়া যায়নি।
+              </div>
+            ) : (
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto min-w-[800px]">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold">
+                        <th className="p-3">তারিখ</th>
+                        <th className="p-3">শিক্ষার্থী</th>
+                        <th className="p-3">ব্যাচ</th>
+                        <th className="p-3 text-center">হাজিরা স্ট্যাটাস</th>
+                        <th className="p-3">লিপিবদ্ধকারী (Recorded By)</th>
+                        <th className="p-3">মন্তব্য</th>
+                        <th className="p-3 text-right">অ্যাকশন</th>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {historyRecords.map((rec) => (
+                        <tr key={rec._id} className="hover:bg-slate-50 transition">
+                          <td className="p-3 font-semibold text-slate-800">
+                            {formatBanglaDate(rec.classDate)}
+                          </td>
+                          <td className="p-3">
+                            <p className="font-semibold text-slate-900">
+                              {rec.student?.fullName}
+                            </p>
+                            <p className="text-[11px] text-slate-400">
+                              আইডি: {rec.student?.studentId}
+                            </p>
+                          </td>
+                          <td className="p-3 text-slate-600">{rec.batch?.name}</td>
+                          <td className="p-3 text-center">
+                            <Badge
+                              variant={
+                                rec.status === "present"
+                                  ? "success"
+                                  : rec.status === "late"
+                                    ? "gold"
+                                    : rec.status === "absent"
+                                      ? "danger"
+                                      : "default"
+                              }
+                            >
+                              {rec.status === "present"
+                                ? "উপস্থিত"
+                                : rec.status === "late"
+                                  ? "বিলম্ব"
+                                  : rec.status === "absent"
+                                    ? "অনুপস্থিত"
+                                    : "ছুটি"}
+                            </Badge>
+                          </td>
+                          <td className="p-3 text-slate-600">
+                            {rec.recordedBy?.fullName ? (
+                              <>
+                                <span className="font-medium text-slate-800">
+                                  {rec.recordedBy.fullName}
+                                </span>
+                                <span className="block text-[10px] text-slate-400 capitalize">
+                                  ({rec.recordedBy.role})
+                                </span>
+                              </>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className="p-3 text-slate-500">{rec.remarks || "—"}</td>
+                          <td className="p-3 text-right">
+                            <ActionDropdown
+                              ariaLabel="হাজিরা অ্যাকশন"
+                              items={[
+                                {
+                                  label: "হাজিরা সংশোধন করুন",
+                                  icon: <Edit2 className="h-4 w-4" />,
+                                  onClick: () => openCorrectionModal(rec),
+                                  variant: "warning",
+                                },
+                              ]}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Cards View */}
+                <div className="md:hidden divide-y divide-slate-100">
+                  {historyRecords.map((rec) => (
+                    <div key={rec._id} className="p-4 bg-white hover:bg-slate-50/60 transition space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant={
+                                rec.status === "present"
+                                  ? "success"
+                                  : rec.status === "late"
+                                    ? "gold"
+                                    : rec.status === "absent"
+                                      ? "danger"
+                                      : "default"
+                              }
+                              className="text-[11px]"
+                            >
+                              {rec.status === "present"
+                                ? "উপস্থিত"
+                                : rec.status === "late"
+                                  ? "বিলম্ব"
+                                  : rec.status === "absent"
+                                    ? "অনুপস্থিত"
+                                    : "ছুটি"}
+                            </Badge>
+                            <span className="text-xs font-semibold text-slate-600">
+                              {formatBanglaDate(rec.classDate)}
+                            </span>
+                          </div>
+                          <h4 className="font-semibold text-slate-900 text-sm">
+                            {rec.student?.fullName}
+                          </h4>
+                          <p className="text-[11px] text-slate-400">
+                            আইডি: {rec.student?.studentId} • ব্যাচ: {rec.batch?.name}
+                          </p>
+                        </div>
+                        <ActionDropdown
+                          ariaLabel="হাজিরা অ্যাকশন"
+                          items={[
+                            {
+                              label: "হাজিরা সংশোধন করুন",
+                              icon: <Edit2 className="h-4 w-4" />,
+                              onClick: () => openCorrectionModal(rec),
+                              variant: "warning",
+                            },
+                          ]}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs pt-1.5 border-t border-slate-100">
+                        <div>
+                          <span className="text-slate-400 block text-[10px]">লিপিবদ্ধকারী</span>
+                          <span className="text-slate-700 font-medium">{rec.recordedBy?.fullName || "—"}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[10px]">মন্তব্য</span>
+                          <span className="text-slate-700 font-medium">{rec.remarks || "—"}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </Card>
         </div>
       )}

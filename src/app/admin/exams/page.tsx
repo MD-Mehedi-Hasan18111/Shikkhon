@@ -33,6 +33,7 @@ import {
   TableCell,
 } from "@/components/ui/Table";
 import { Pagination } from "@/components/ui/Pagination";
+import { ActionDropdown } from "@/components/ui/ActionDropdown";
 import { Alert } from "@/components/ui/Alert";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAppDispatch } from "@/store";
@@ -451,6 +452,27 @@ export default function ExamManagementPage() {
   const passPercentage =
     totalSubmissions > 0 ? Math.round((passedStudents / totalSubmissions) * 100) : 0;
 
+  const getExamActionItems = (exam: ExamItem) => [
+    {
+      label: "নম্বর এন্ট্রি",
+      icon: <ClipboardList className="h-4 w-4" />,
+      onClick: () => openMarksDialog(exam),
+      variant: "primary" as const,
+    },
+    {
+      label: "মেধা তালিকা",
+      icon: <Award className="h-4 w-4" />,
+      onClick: () => openMeritDialog(exam),
+      variant: "warning" as const,
+    },
+    {
+      label: "ফলাফল শিট প্রিন্ট",
+      icon: <Printer className="h-4 w-4" />,
+      onClick: () => openPrintSheet(exam),
+      variant: "default" as const,
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -529,139 +551,172 @@ export default function ExamManagementPage() {
         </CardContent>
       </Card>
 
-      {/* Exams Table */}
+      {/* Exams Table & Mobile Cards */}
       <Card className="overflow-hidden border-slate-200">
-        <div className="overflow-x-auto min-w-[750px]">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-slate-100/75">
-                <TableHead className="font-bold">পরীক্ষার শিরোনাম ও বিষয়</TableHead>
-                <TableHead className="font-bold">ব্যাচ ও শ্রেণি</TableHead>
-                <TableHead className="font-bold">তারিখ</TableHead>
-                <TableHead className="font-bold text-center">পূর্ণমান (Pass)</TableHead>
-                <TableHead className="font-bold text-center">ধরন</TableHead>
-                <TableHead className="font-bold text-center">ফলাফল অবস্থা</TableHead>
-                <TableHead className="text-right font-bold">অ্যাকশন</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell colSpan={7} className="py-4">
-                      <Skeleton className="h-6 w-full" />
-                    </TableCell>
+        {loading ? (
+          <div className="p-6 space-y-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-14 w-full rounded-lg" />
+            ))}
+          </div>
+        ) : exams.length === 0 ? (
+          <div className="py-12 text-center text-slate-400">
+            <BookOpen className="h-10 w-10 mx-auto opacity-30 mb-2" />
+            <p className="text-sm font-semibold">কোনো পরীক্ষার তথ্য পাওয়া যায়নি</p>
+          </div>
+        ) : (
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-100/75">
+                    <TableHead className="font-bold">পরীক্ষার শিরোনাম ও বিষয়</TableHead>
+                    <TableHead className="font-bold">ব্যাচ ও শ্রেণি</TableHead>
+                    <TableHead className="font-bold">তারিখ</TableHead>
+                    <TableHead className="font-bold text-center">পূর্ণমান (Pass)</TableHead>
+                    <TableHead className="font-bold text-center">ধরন</TableHead>
+                    <TableHead className="font-bold text-center">ফলাফল অবস্থা</TableHead>
+                    <TableHead className="text-right font-bold">অ্যাকশন</TableHead>
                   </TableRow>
-                ))
-              ) : exams.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-8 text-center text-slate-400">
-                    কোনো পরীক্ষার তথ্য পাওয়া যায়নি।
-                  </TableCell>
-                </TableRow>
-              ) : (
-                exams.map((exam) => (
-                  <TableRow key={exam._id} className="hover:bg-slate-50/80 transition">
-                    <TableCell>
-                      <div className="flex items-center gap-2.5">
-                        <div className="h-8 w-8 rounded-lg bg-teal-50 text-[#00636b] flex items-center justify-center shrink-0">
-                          <BookOpen className="h-4 w-4" />
+                </TableHeader>
+                <TableBody>
+                  {exams.map((exam) => (
+                    <TableRow key={exam._id} className="hover:bg-slate-50/80 transition">
+                      <TableCell>
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-8 w-8 rounded-lg bg-teal-50 text-[#00636b] flex items-center justify-center shrink-0">
+                            <BookOpen className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-slate-900 text-xs sm:text-sm">
+                              {exam.title}
+                            </p>
+                            <p className="text-[11px] text-slate-500 font-medium">
+                              বিষয়: {exam.subject}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-bold text-slate-900 text-xs sm:text-sm">
-                            {exam.title}
-                          </p>
-                          <p className="text-[11px] text-slate-500 font-medium">
-                            বিষয়: {exam.subject}
-                          </p>
-                        </div>
-                      </div>
-                    </TableCell>
+                      </TableCell>
 
-                    <TableCell>
-                      <span className="font-semibold text-slate-800 text-xs">
-                        {exam.batch?.name}
-                      </span>
-                      <span className="block text-[10px] text-slate-400">
-                        {exam.batch?.classLevel} • {exam.batch?.code}
-                      </span>
-                    </TableCell>
+                      <TableCell>
+                        <span className="font-semibold text-slate-800 text-xs">
+                          {exam.batch?.name}
+                        </span>
+                        <span className="block text-[10px] text-slate-400">
+                          {exam.batch?.classLevel} • {exam.batch?.code}
+                        </span>
+                      </TableCell>
 
-                    <TableCell className="text-xs text-slate-600">
-                      {formatBanglaDate(exam.examDate)}
-                    </TableCell>
+                      <TableCell className="text-xs text-slate-600">
+                        {formatBanglaDate(exam.examDate)}
+                      </TableCell>
 
-                    <TableCell className="text-center font-bold text-slate-800 text-xs">
-                      {toBanglaNumber(exam.maximumMarks)}{" "}
-                      <span className="text-[10px] text-slate-400 font-normal">
-                        ({toBanglaNumber(exam.passMarks || 40)})
-                      </span>
-                    </TableCell>
+                      <TableCell className="text-center font-bold text-slate-800 text-xs">
+                        {toBanglaNumber(exam.maximumMarks)}{" "}
+                        <span className="text-[10px] text-slate-400 font-normal">
+                          ({toBanglaNumber(exam.passMarks || 40)})
+                        </span>
+                      </TableCell>
 
-                    <TableCell className="text-center">
-                      <Badge variant="outline" className="text-[10px]">
-                        {exam.examType === "weekly"
-                          ? "সাপ্তাহিক"
-                          : exam.examType === "monthly"
-                            ? "মাসিক"
-                            : exam.examType === "model_test"
-                              ? "মডেল টেস্ট"
-                              : "টার্ম"}
-                      </Badge>
-                    </TableCell>
-
-                    <TableCell className="text-center">
-                      {exam.publicationStatus === "published" ? (
-                        <Badge variant="success" className="text-[11px] gap-1">
-                          <Globe className="h-3 w-3" />
-                          <span>প্রকাশিত</span>
+                      <TableCell className="text-center">
+                        <Badge variant="outline" className="text-[10px]">
+                          {exam.examType === "weekly"
+                            ? "সাপ্তাহিক"
+                            : exam.examType === "monthly"
+                              ? "মাসিক"
+                              : exam.examType === "model_test"
+                                ? "মডেল টেস্ট"
+                                : "টার্ম"}
                         </Badge>
-                      ) : (
-                        <Badge variant="default" className="text-[11px] gap-1">
-                          <Lock className="h-3 w-3" />
-                          <span>খসড়া</span>
-                        </Badge>
-                      )}
-                    </TableCell>
+                      </TableCell>
 
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openMarksDialog(exam)}
-                          className="h-7 text-xs text-[#00636b] hover:bg-[#eff8f9]"
-                          title="নম্বর এন্ট্রি"
-                        >
-                          নম্বর এন্ট্রি
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openMeritDialog(exam)}
-                          className="h-7 text-xs text-amber-700 hover:bg-amber-50"
-                          title="মেধা তালিকা"
-                        >
-                          <Award className="h-3.5 w-3.5 mr-1" />
-                          মেধা তালিকা
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openPrintSheet(exam)}
-                          className="h-7 text-xs text-slate-700 hover:bg-slate-100"
-                          title="প্রিন্ট শিট"
-                        >
-                          <Printer className="h-3.5 w-3.5" />
-                        </Button>
+                      <TableCell className="text-center">
+                        {exam.publicationStatus === "published" ? (
+                          <Badge variant="success" className="text-[11px] gap-1">
+                            <Globe className="h-3 w-3" />
+                            <span>প্রকাশিত</span>
+                          </Badge>
+                        ) : (
+                          <Badge variant="default" className="text-[11px] gap-1">
+                            <Lock className="h-3 w-3" />
+                            <span>খসড়া</span>
+                          </Badge>
+                        )}
+                      </TableCell>
+
+                      <TableCell className="text-right">
+                        <ActionDropdown
+                          ariaLabel="পরীক্ষা অ্যাকশন"
+                          items={getExamActionItems(exam)}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile Cards View */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {exams.map((exam) => (
+                <div key={exam._id} className="p-4 bg-white hover:bg-slate-50/60 transition space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Badge variant="outline" className="text-[10px]">
+                          {exam.examType === "weekly"
+                            ? "সাপ্তাহিক"
+                            : exam.examType === "monthly"
+                              ? "মাসিক"
+                              : exam.examType === "model_test"
+                                ? "মডেল টেস্ট"
+                                : "টার্ম"}
+                        </Badge>
+                        {exam.publicationStatus === "published" ? (
+                          <Badge variant="success" className="text-[10px] gap-1">
+                            <Globe className="h-3 w-3" />
+                            <span>প্রকাশিত</span>
+                          </Badge>
+                        ) : (
+                          <Badge variant="default" className="text-[10px] gap-1">
+                            <Lock className="h-3 w-3" />
+                            <span>খসড়া</span>
+                          </Badge>
+                        )}
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                      <h4 className="font-bold text-slate-900 text-sm">{exam.title}</h4>
+                      <p className="text-[11px] text-slate-500 font-medium">
+                        বিষয়: {exam.subject} • {formatBanglaDate(exam.examDate)}
+                      </p>
+                    </div>
+                    <ActionDropdown
+                      ariaLabel="পরীক্ষা অ্যাকশন"
+                      items={getExamActionItems(exam)}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-100">
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">ব্যাচ ও শ্রেণি</span>
+                      <span className="font-semibold text-slate-800">{exam.batch?.name}</span>
+                      <p className="text-[10px] text-slate-400">{exam.batch?.classLevel} • {exam.batch?.code}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">পূর্ণমান ও পাস নম্বর</span>
+                      <span className="font-bold text-slate-800">
+                        পূর্ণমান: {toBanglaNumber(exam.maximumMarks)}
+                      </span>
+                      <p className="text-[10px] text-slate-500">
+                        পাস: {toBanglaNumber(exam.passMarks || 40)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
 
         {!loading && totalPages > 1 && (
           <div className="p-4 border-t border-slate-100 flex items-center justify-between">

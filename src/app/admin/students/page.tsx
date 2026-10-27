@@ -17,6 +17,7 @@ import {
   School,
   X,
   CheckCircle2,
+  UserCheck,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -34,6 +35,7 @@ import {
   TableCell,
 } from "@/components/ui/Table";
 import { Pagination } from "@/components/ui/Pagination";
+import { ActionDropdown } from "@/components/ui/ActionDropdown";
 import { Alert } from "@/components/ui/Alert";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAppDispatch } from "@/store";
@@ -152,7 +154,7 @@ export default function StudentManagementPage() {
   const [totalStudents, setTotalStudents] = useState(0);
   const [search, setSearch] = useState("");
   const [selectedClass, setSelectedClass] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("active");
+  const [selectedStatus, setSelectedStatus] = useState("");
 
   // Dialog States
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -160,6 +162,7 @@ export default function StudentManagementPage() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
+  const [activateDialogOpen, setActivateDialogOpen] = useState(false);
 
   // Selected Target Student for actions
   const [targetStudent, setTargetStudent] = useState<StudentItem | null>(null);
@@ -453,7 +456,9 @@ export default function StudentManagementPage() {
     if (!targetStudent) return;
     try {
       const res = await fetch(`/api/students/${targetStudent._id}`, {
-        method: "DELETE",
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "inactive" }),
         credentials: "include",
       });
 
@@ -483,6 +488,85 @@ export default function StudentManagementPage() {
       );
     }
   };
+
+  // 9. Handle Student Reactivation
+  const handleActivateStudent = async () => {
+    if (!targetStudent) return;
+    try {
+      const res = await fetch(`/api/students/${targetStudent._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "active" }),
+        credentials: "include",
+      });
+
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || "সক্রিয় করা সম্ভব হয়নি।");
+      }
+
+      dispatch(
+        addNotification({
+          type: "success",
+          title: "সক্রিয়করণ সম্পন্ন",
+          message: "শিক্ষার্থীর অ্যাকাউন্ট সফলভাবে পুনরায় সক্রিয় করা হয়েছে।",
+        })
+      );
+
+      setActivateDialogOpen(false);
+      fetchStudents();
+    } catch (err: unknown) {
+      dispatch(
+        addNotification({
+          type: "error",
+          title: "ব্যর্থ",
+          message: err instanceof Error ? err.message : "সমস্যা হয়েছে।",
+        })
+      );
+    }
+  };
+
+  const getStudentActionItems = (student: StudentItem) => [
+    {
+      label: "বিস্তারিত দেখুন",
+      icon: <Eye className="h-4 w-4" />,
+      onClick: () => openDetailDialog(student),
+      variant: "primary" as const,
+    },
+    {
+      label: "ব্যাচে ভর্তি করান",
+      icon: <GraduationCap className="h-4 w-4" />,
+      onClick: () => openEnrollDialog(student),
+      variant: "default" as const,
+    },
+    {
+      label: "তথ্য সম্পাদন",
+      icon: <Edit className="h-4 w-4" />,
+      onClick: () => openEditDialog(student),
+      variant: "warning" as const,
+    },
+    {
+      label: "শিক্ষার্থী পুনরায় সক্রিয় করুন",
+      icon: <UserCheck className="h-4 w-4" />,
+      onClick: () => {
+        setTargetStudent(student);
+        setActivateDialogOpen(true);
+      },
+      variant: "success" as const,
+      hidden: student.status === "active",
+    },
+    {
+      label: "শিক্ষার্থী নিষ্ক্রিয় করুন",
+      icon: <Trash2 className="h-4 w-4" />,
+      onClick: () => {
+        setTargetStudent(student);
+        setDeactivateDialogOpen(true);
+      },
+      variant: "danger" as const,
+      hidden: student.status !== "active",
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -567,10 +651,10 @@ export default function StudentManagementPage() {
                   setPage(1);
                 }}
                 options={[
-                  { value: "", label: "সকল স্ট্যাটাস" },
-                  { value: "active", label: "সক্রিয় (Active)" },
-                  { value: "inactive", label: "নিষ্ক্রিয় (Inactive)" },
-                  { value: "graduated", label: "উত্তীর্ণ (Graduated)" },
+                  { value: "", label: "সকল শিক্ষার্থী (All Status)" },
+                  { value: "active", label: "সক্রিয় শিক্ষার্থী (Active)" },
+                  { value: "inactive", label: "নিষ্ক্রিয় শিক্ষার্থী (Deactivated)" },
+                  { value: "graduated", label: "উত্তীর্ণ শিক্ষার্থী (Graduated)" },
                 ]}
               />
             </div>
@@ -610,115 +694,139 @@ export default function StudentManagementPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>আইডি</TableHead>
-                  <TableHead>শিক্ষার্থীর নাম</TableHead>
-                  <TableHead>শ্রেণি ও প্রতিষ্ঠান</TableHead>
-                  <TableHead>মোবাইল নম্বর</TableHead>
-                  <TableHead>অভিভাবকের তথ্য</TableHead>
-                  <TableHead>স্ট্যাটাস</TableHead>
-                  <TableHead className="text-right">কার্যক্রম</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {students.map((student) => (
-                  <TableRow key={student._id} className="hover:bg-slate-50">
-                    <TableCell className="font-mono text-xs font-bold text-[#00636b]">
-                      {student.studentId}
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-semibold text-slate-900 text-sm">
-                        {student.fullName}
-                      </div>
-                      <div className="text-[11px] text-slate-400">
-                        ভর্তি: {formatBanglaDate(student.createdAt)}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs font-normal">
-                        {classLevelLabels[student.classLevel] || student.classLevel}
-                      </Badge>
-                      <p className="text-xs text-slate-500 mt-0.5 truncate max-w-xs">
-                        {student.institutionName}
-                      </p>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs text-slate-700">
-                      {student.phone}
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-xs font-medium text-slate-800">
-                        {student.guardian.name} ({student.guardian.relation})
-                      </div>
-                      <div className="text-[11px] font-mono text-slate-500">
-                        {student.guardian.phone}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={student.status === "active" ? "success" : "secondary"}
-                        className="text-xs"
-                      >
-                        {student.status === "active" ? "সক্রিয়" : "নিষ্ক্রিয়"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right space-x-1">
-                      {/* Details Button */}
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={() => openDetailDialog(student)}
-                        className="text-slate-600 hover:text-[#00636b]"
-                        title="বিস্তারিত দেখুন"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-
-                      {/* Enroll in Batch Button */}
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={() => openEnrollDialog(student)}
-                        className="text-teal-600 hover:bg-teal-50"
-                        title="ব্যাচে ভর্তি করান"
-                      >
-                        <GraduationCap className="h-4 w-4" />
-                      </Button>
-
-                      {/* Edit Button */}
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={() => openEditDialog(student)}
-                        className="text-blue-600 hover:bg-blue-50"
-                        title="তথ্য সম্পাদন"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-
-                      {/* Deactivate Button */}
-                      {student.status === "active" && (
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          onClick={() => {
-                            setTargetStudent(student);
-                            setDeactivateDialogOpen(true);
-                          }}
-                          className="text-rose-600 hover:bg-rose-50"
-                          title="নিষ্ক্রিয় করুন"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </TableCell>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>আইডি</TableHead>
+                    <TableHead>শিক্ষার্থীর নাম</TableHead>
+                    <TableHead>শ্রেণি ও প্রতিষ্ঠান</TableHead>
+                    <TableHead>মোবাইল নম্বর</TableHead>
+                    <TableHead>অভিভাবকের তথ্য</TableHead>
+                    <TableHead>স্ট্যাটাস</TableHead>
+                    <TableHead className="text-right">কার্যক্রম</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {students.map((student) => (
+                    <TableRow key={student._id} className="hover:bg-slate-50">
+                      <TableCell className="font-mono text-xs font-bold text-[#00636b]">
+                        {student.studentId}
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-semibold text-slate-900 text-sm">
+                          {student.fullName}
+                        </div>
+                        <div className="text-[11px] text-slate-400">
+                          ভর্তি: {formatBanglaDate(student.createdAt)}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs font-normal">
+                          {classLevelLabels[student.classLevel] || student.classLevel}
+                        </Badge>
+                        <p className="text-xs text-slate-500 mt-0.5 truncate max-w-xs">
+                          {student.institutionName}
+                        </p>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-slate-700">
+                        {student.phone}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-xs font-medium text-slate-800">
+                          {student.guardian.name} ({student.guardian.relation})
+                        </div>
+                        <div className="text-[11px] font-mono text-slate-500">
+                          {student.guardian.phone}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            student.status === "active"
+                              ? "success"
+                              : student.status === "inactive"
+                                ? "danger"
+                                : "secondary"
+                          }
+                          className="text-xs font-semibold"
+                        >
+                          {student.status === "active"
+                            ? "সক্রিয়"
+                            : student.status === "inactive"
+                              ? "নিষ্ক্রিয় (Deactivated)"
+                              : student.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <ActionDropdown
+                          ariaLabel="শিক্ষার্থী অ্যাকশন"
+                          items={getStudentActionItems(student)}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile Cards View */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {students.map((student) => (
+                <div key={student._id} className="p-4 bg-white hover:bg-slate-50/60 transition space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-[#00636b] bg-teal-50 px-2 py-0.5 rounded">
+                          {student.studentId}
+                        </span>
+                        <Badge
+                          variant={
+                            student.status === "active"
+                              ? "success"
+                              : student.status === "inactive"
+                                ? "danger"
+                                : "secondary"
+                          }
+                          className="text-[11px] font-semibold"
+                        >
+                          {student.status === "active"
+                            ? "সক্রিয়"
+                            : student.status === "inactive"
+                              ? "নিষ্ক্রিয় (Deactivated)"
+                              : student.status}
+                        </Badge>
+                      </div>
+                      <h4 className="font-semibold text-slate-900 text-sm">{student.fullName}</h4>
+                      <p className="text-[11px] text-slate-400">ভর্তি: {formatBanglaDate(student.createdAt)}</p>
+                    </div>
+                    <ActionDropdown
+                      ariaLabel="শিক্ষার্থী অ্যাকশন"
+                      items={getStudentActionItems(student)}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-1.5 border-t border-slate-100">
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">শ্রেণি ও প্রতিষ্ঠান</span>
+                      <span className="font-medium text-slate-700">{classLevelLabels[student.classLevel] || student.classLevel}</span>
+                      <p className="text-[11px] text-slate-500 truncate">{student.institutionName}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">মোবাইল নম্বর</span>
+                      <span className="font-mono text-slate-800 font-medium">{student.phone}</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-slate-400 block text-[10px]">অভিভাবক</span>
+                      <span className="text-slate-700">{student.guardian.name} ({student.guardian.relation}) — <span className="font-mono text-slate-500">{student.guardian.phone}</span></span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         {/* Pagination bar */}
@@ -1284,6 +1392,37 @@ export default function StudentManagementPage() {
           <strong className="text-slate-900">{targetStudent?.fullName}</strong> (আইডি:{" "}
           <span className="font-mono text-[#00636b]">{targetStudent?.studentId}</span>)-কে
           নিষ্ক্রিয় ও আর্কাইভ করতে চান?
+        </div>
+      </Dialog>
+
+      {/* ============================================================ */}
+      {/* DIALOG 5: Reactivation Confirmation */}
+      {/* ============================================================ */}
+      <Dialog
+        isOpen={activateDialogOpen}
+        onClose={() => setActivateDialogOpen(false)}
+        title="শিক্ষার্থী পুনরায় সক্রিয়করণ নিশ্চিতকরণ"
+        description="শিক্ষার্থীকে পুনরায় সক্রিয় করা হলে তিনি ড্যাশবোর্ডে লগইন করতে পারবেন এবং নতুন ব্যাচে ভর্তি হতে পারবেন।"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setActivateDialogOpen(false)}>
+              না, ফিরে যান
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleActivateStudent}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              হ্যাঁ, সক্রিয় করুন
+            </Button>
+          </>
+        }
+      >
+        <div className="py-2 text-sm text-slate-600">
+          আপনি কি নিশ্চিতভাবে{" "}
+          <strong className="text-slate-900">{targetStudent?.fullName}</strong> (আইডি:{" "}
+          <span className="font-mono text-[#00636b]">{targetStudent?.studentId}</span>)-কে
+          পুনরায় সক্রিয় করতে চান?
         </div>
       </Dialog>
     </div>

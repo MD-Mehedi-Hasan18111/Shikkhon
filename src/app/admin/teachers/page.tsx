@@ -32,6 +32,7 @@ import {
   TableCell,
 } from "@/components/ui/Table";
 import { Pagination } from "@/components/ui/Pagination";
+import { ActionDropdown } from "@/components/ui/ActionDropdown";
 import { Alert } from "@/components/ui/Alert";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAppDispatch } from "@/store";
@@ -84,6 +85,7 @@ export default function TeacherManagementPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
+  const [activateDialogOpen, setActivateDialogOpen] = useState(false);
 
   // Selected Target Teacher
   const [targetTeacher, setTargetTeacher] = useState<TeacherItem | null>(null);
@@ -273,7 +275,9 @@ export default function TeacherManagementPage() {
     if (!targetTeacher) return;
     try {
       const res = await fetch(`/api/teachers/${targetTeacher._id}`, {
-        method: "DELETE",
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: false }),
         credentials: "include",
       });
       const json = await res.json();
@@ -302,6 +306,77 @@ export default function TeacherManagementPage() {
       );
     }
   };
+
+  // 6. Reactivate Teacher
+  const handleActivateTeacher = async () => {
+    if (!targetTeacher) return;
+    try {
+      const res = await fetch(`/api/teachers/${targetTeacher._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: true }),
+        credentials: "include",
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || "সক্রিয় করা সম্ভব হয়নি।");
+      }
+
+      dispatch(
+        addNotification({
+          type: "success",
+          title: "সক্রিয়করণ সম্পন্ন",
+          message: "শিক্ষকের অ্যাকাউন্ট সফলভাবে পুনরায় সক্রিয় করা হয়েছে।",
+        })
+      );
+
+      setActivateDialogOpen(false);
+      fetchTeachers();
+    } catch (err: unknown) {
+      dispatch(
+        addNotification({
+          type: "error",
+          title: "ব্যর্থ",
+          message: err instanceof Error ? err.message : "সমস্যা হয়েছে।",
+        })
+      );
+    }
+  };
+
+  const getTeacherActionItems = (teacher: TeacherItem) => [
+    {
+      label: "বিস্তারিত দেখুন",
+      icon: <Eye className="h-4 w-4" />,
+      onClick: () => openDetailDialog(teacher),
+      variant: "primary" as const,
+    },
+    {
+      label: "তথ্য সম্পাদন",
+      icon: <Edit className="h-4 w-4" />,
+      onClick: () => openEditDialog(teacher),
+      variant: "warning" as const,
+    },
+    {
+      label: "শিক্ষক পুনরায় সক্রিয় করুন",
+      icon: <CheckCircle2 className="h-4 w-4" />,
+      onClick: () => {
+        setTargetTeacher(teacher);
+        setActivateDialogOpen(true);
+      },
+      variant: "success" as const,
+      hidden: teacher.isActive,
+    },
+    {
+      label: "শিক্ষক নিষ্ক্রিয় করুন",
+      icon: <Trash2 className="h-4 w-4" />,
+      onClick: () => {
+        setTargetTeacher(teacher);
+        setDeactivateDialogOpen(true);
+      },
+      variant: "danger" as const,
+      hidden: !teacher.isActive,
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -359,9 +434,9 @@ export default function TeacherManagementPage() {
                   setPage(1);
                 }}
                 options={[
-                  { value: "", label: "সকল শিক্ষক" },
-                  { value: "true", label: "সক্রিয় শিক্ষকবৃন্দ" },
-                  { value: "false", label: "নিষ্ক্রিয় শিক্ষকবৃন্দ" },
+                  { value: "", label: "সকল শিক্ষক (All Teachers)" },
+                  { value: "true", label: "সক্রিয় শিক্ষকবৃন্দ (Active)" },
+                  { value: "false", label: "নিষ্ক্রিয় শিক্ষকবৃন্দ (Deactivated)" },
                 ]}
               />
             </div>
@@ -399,107 +474,136 @@ export default function TeacherManagementPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>কোড</TableHead>
-                  <TableHead>শিক্ষকের নাম</TableHead>
-                  <TableHead>পাঠদানের বিষয়সমূহ</TableHead>
-                  <TableHead>যোগাযোগ</TableHead>
-                  <TableHead>যোগদানের তারিখ</TableHead>
-                  <TableHead>স্ট্যাটাস</TableHead>
-                  <TableHead className="text-right">কার্যক্রম</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {teachers.map((teacher) => (
-                  <TableRow key={teacher._id} className="hover:bg-slate-50">
-                    <TableCell className="font-mono text-xs font-bold text-[#c27a29]">
-                      {teacher.teacherCode}
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-semibold text-slate-900 text-sm">
-                        {teacher.fullName}
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>কোড</TableHead>
+                    <TableHead>শিক্ষকের নাম</TableHead>
+                    <TableHead>পাঠদানের বিষয়সমূহ</TableHead>
+                    <TableHead>যোগাযোগ</TableHead>
+                    <TableHead>যোগদানের তারিখ</TableHead>
+                    <TableHead>স্ট্যাটাস</TableHead>
+                    <TableHead className="text-right">কার্যক্রম</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {teachers.map((teacher) => (
+                    <TableRow key={teacher._id} className="hover:bg-slate-50">
+                      <TableCell className="font-mono text-xs font-bold text-[#c27a29]">
+                        {teacher.teacherCode}
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-semibold text-slate-900 text-sm">
+                          {teacher.fullName}
+                        </div>
+                        <div className="text-[11px] text-slate-500 truncate max-w-xs">
+                          {teacher.qualifications.join(", ") ||
+                            "শিক্ষাগত যোগ্যতা উল্লেখ নেই"}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {teacher.subjects.map((sub, idx) => (
+                            <Badge
+                              key={idx}
+                              variant="outline"
+                              className="text-xs font-normal"
+                            >
+                              {sub}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-xs font-mono text-slate-800">
+                          {teacher.phone}
+                        </div>
+                        {teacher.email && (
+                          <div className="text-[11px] text-slate-400 truncate max-w-[150px]">
+                            {teacher.email}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-600">
+                        {formatBanglaDate(teacher.joiningDate)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={teacher.isActive ? "success" : "danger"}
+                          className="text-xs font-semibold"
+                        >
+                          {teacher.isActive ? "সক্রিয়" : "নিষ্ক্রিয় (Deactivated)"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <ActionDropdown
+                          ariaLabel="শিক্ষক অ্যাকশন"
+                          items={getTeacherActionItems(teacher)}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile Cards View */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {teachers.map((teacher) => (
+                <div key={teacher._id} className="p-4 bg-white hover:bg-slate-50/60 transition space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-[#c27a29] bg-amber-50 px-2 py-0.5 rounded">
+                          {teacher.teacherCode}
+                        </span>
+                        <Badge
+                          variant={teacher.isActive ? "success" : "danger"}
+                          className="text-[11px] font-semibold"
+                        >
+                          {teacher.isActive ? "সক্রিয়" : "নিষ্ক্রিয় (Deactivated)"}
+                        </Badge>
                       </div>
-                      <div className="text-[11px] text-slate-500 truncate max-w-xs">
-                        {teacher.qualifications.join(", ") ||
-                          "শিক্ষাগত যোগ্যতা উল্লেখ নেই"}
-                      </div>
-                    </TableCell>
-                    <TableCell>
+                      <h4 className="font-semibold text-slate-900 text-sm">{teacher.fullName}</h4>
+                      <p className="text-[11px] text-slate-500 truncate max-w-[220px]">
+                        {teacher.qualifications.join(", ") || "শিক্ষাগত যোগ্যতা উল্লেখ নেই"}
+                      </p>
+                    </div>
+                    <ActionDropdown
+                      ariaLabel="শিক্ষক অ্যাকশন"
+                      items={getTeacherActionItems(teacher)}
+                    />
+                  </div>
+
+                  <div className="pt-1.5 border-t border-slate-100 space-y-2 text-xs">
+                    <div>
+                      <span className="text-slate-400 block text-[10px] mb-1">পাঠদানের বিষয়সমূহ</span>
                       <div className="flex flex-wrap gap-1">
                         {teacher.subjects.map((sub, idx) => (
-                          <Badge
-                            key={idx}
-                            variant="outline"
-                            className="text-xs font-normal"
-                          >
+                          <Badge key={idx} variant="outline" className="text-[11px] font-normal py-0">
                             {sub}
                           </Badge>
                         ))}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-xs font-mono text-slate-800">
-                        {teacher.phone}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-50">
+                      <div>
+                        <span className="text-slate-400 block text-[10px]">মোবাইল</span>
+                        <span className="font-mono font-medium text-slate-800">{teacher.phone}</span>
                       </div>
-                      {teacher.email && (
-                        <div className="text-[11px] text-slate-400 truncate max-w-[150px]">
-                          {teacher.email}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-600">
-                      {formatBanglaDate(teacher.joiningDate)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={teacher.isActive ? "success" : "secondary"}
-                        className="text-xs"
-                      >
-                        {teacher.isActive ? "সক্রিয়" : "নিষ্ক্রিয়"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={() => openDetailDialog(teacher)}
-                        className="text-slate-600 hover:text-[#00636b]"
-                        title="বিস্তারিত দেখুন"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={() => openEditDialog(teacher)}
-                        className="text-blue-600 hover:bg-blue-50"
-                        title="সম্পাদনা"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      {teacher.isActive && (
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          onClick={() => {
-                            setTargetTeacher(teacher);
-                            setDeactivateDialogOpen(true);
-                          }}
-                          className="text-rose-600 hover:bg-rose-50"
-                          title="নিষ্ক্রিয় করুন"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px]">যোগদান</span>
+                        <span className="text-slate-600">{formatBanglaDate(teacher.joiningDate)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         {/* Pagination */}
@@ -786,6 +890,35 @@ export default function TeacherManagementPage() {
           আপনি কি নিশ্চিতভাবে{" "}
           <strong className="text-slate-900">{targetTeacher?.fullName}</strong>
           -কে নিষ্ক্রিয় করতে চান?
+        </div>
+      </Dialog>
+
+      {/* DIALOG 4: Reactivate Confirmation */}
+      <Dialog
+        isOpen={activateDialogOpen}
+        onClose={() => setActivateDialogOpen(false)}
+        title="শিক্ষক পুনরায় সক্রিয়করণ"
+        description="শিক্ষককে সক্রিয় করা হলে তিনি পুনরায় ড্যাশবোর্ডে লগইন করতে পারবেন এবং নতুন ব্যাচে ক্লাস পরিচালনা করতে পারবেন।"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setActivateDialogOpen(false)}>
+              ফিরে যান
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleActivateTeacher}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              হ্যাঁ, সক্রিয় করুন
+            </Button>
+          </>
+        }
+      >
+        <div className="py-2 text-sm text-slate-600">
+          আপনি কি নিশ্চিতভাবে{" "}
+          <strong className="text-slate-900">{targetTeacher?.fullName}</strong> (কোড:{" "}
+          <span className="font-mono text-[#00636b]">{targetTeacher?.teacherCode}</span>)-কে
+          পুনরায় সক্রিয় করতে চান?
         </div>
       </Dialog>
     </div>

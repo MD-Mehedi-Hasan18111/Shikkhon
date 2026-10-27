@@ -140,6 +140,9 @@ export const PATCH = createApiHandler(
         if (validated.password) user.password = validated.password;
         if (validated.avatarUrl) user.avatarUrl = validated.avatarUrl;
         if (validated.email !== undefined) user.email = normalizeEmail(validated.email) || undefined;
+        if (validated.isActive !== undefined) {
+          user.isActive = validated.isActive;
+        }
         await user.save();
       }
     }
@@ -156,9 +159,13 @@ export const DELETE = createApiHandler(
     const { id } = await params;
 
     const session = await getAuthenticatedUser(req);
-    requireRole(session, ["super_admin"]);
-
     const forceDelete = req.nextUrl.searchParams.get("force") === "true";
+
+    if (forceDelete) {
+      requireRole(session, ["super_admin"]);
+    } else {
+      requireRole(session, ["super_admin", "admin"]);
+    }
     const teacher = await Teacher.findById(id);
 
     if (!teacher) {
@@ -169,6 +176,9 @@ export const DELETE = createApiHandler(
       // Soft deactivation to preserve historical records in past batches
       teacher.isActive = false;
       await teacher.save();
+      if (teacher.userId) {
+        await User.findByIdAndUpdate(teacher.userId, { isActive: false });
+      }
 
       return apiSuccess(
         teacher,

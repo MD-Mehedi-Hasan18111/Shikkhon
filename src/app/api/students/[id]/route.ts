@@ -185,7 +185,9 @@ export const PATCH = createApiHandler(
         if (validated.fullName) user.fullName = validated.fullName.trim();
         if (validated.password) user.password = validated.password;
         if (validated.avatarUrl) user.avatarUrl = validated.avatarUrl;
-        if (validated.email !== undefined) user.email = normalizeEmail(validated.email) || undefined;
+        if (validated.status) {
+          user.isActive = validated.status === "active";
+        }
         await user.save();
       }
     }
@@ -201,11 +203,14 @@ export const DELETE = createApiHandler(
     const { params } = context as RouteParams;
     const { id } = await params;
 
-    // Only Super Admin can deactivate or delete student records
     const session = await getAuthenticatedUser(req);
-    requireRole(session, ["super_admin"]);
-
     const forceDelete = req.nextUrl.searchParams.get("force") === "true";
+
+    if (forceDelete) {
+      requireRole(session, ["super_admin"]);
+    } else {
+      requireRole(session, ["super_admin", "admin"]);
+    }
     const student = await Student.findById(id);
 
     if (!student) {
@@ -216,6 +221,9 @@ export const DELETE = createApiHandler(
       // Academic history preservation: deactivate rather than hard delete
       student.status = "inactive";
       await student.save();
+      if (student.userId) {
+        await User.findByIdAndUpdate(student.userId, { isActive: false });
+      }
       return apiSuccess(
         student,
         "শিক্ষার্থীর রেকর্ডটি সফলভাবে নিষ্ক্রিয় ও আর্কাইভ করা হয়েছে (অ্যাকাডেমিক ইতিহাস সংরক্ষিত রয়েছে)।"

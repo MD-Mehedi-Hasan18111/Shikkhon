@@ -34,6 +34,7 @@ import {
   TableCell,
 } from "@/components/ui/Table";
 import { Pagination } from "@/components/ui/Pagination";
+import { ActionDropdown } from "@/components/ui/ActionDropdown";
 import { Alert } from "@/components/ui/Alert";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAppDispatch } from "@/store";
@@ -402,6 +403,31 @@ export default function BatchManagementPage() {
     setFormData({ ...formData, schedule: updated });
   };
 
+  const getBatchActionItems = (batch: BatchItem) => [
+    {
+      label: "বিস্তারিত দেখুন",
+      icon: <Eye className="h-4 w-4" />,
+      onClick: () => openDetailDialog(batch),
+      variant: "primary" as const,
+    },
+    {
+      label: "তথ্য সম্পাদন",
+      icon: <Edit className="h-4 w-4" />,
+      onClick: () => openEditDialog(batch),
+      variant: "warning" as const,
+    },
+    {
+      label: "আর্কাইভ / সমাপ্ত করুন",
+      icon: <Trash2 className="h-4 w-4" />,
+      onClick: () => {
+        setTargetBatch(batch);
+        setArchiveDialogOpen(true);
+      },
+      variant: "danger" as const,
+      hidden: batch.status !== "active",
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -528,106 +554,137 @@ export default function BatchManagementPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>কোড</TableHead>
-                  <TableHead>ব্যাচের নাম ও শ্রেণি</TableHead>
-                  <TableHead>শিক্ষাবর্ষ</TableHead>
-                  <TableHead>নির্ধারিত শিক্ষক</TableHead>
-                  <TableHead>আসন ও ফি</TableHead>
-                  <TableHead>সাপ্তাহিক ক্লাস</TableHead>
-                  <TableHead>স্ট্যাটাস</TableHead>
-                  <TableHead className="text-right">কার্যক্রম</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {batches.map((batch) => (
-                  <TableRow key={batch._id} className="hover:bg-slate-50">
-                    <TableCell className="font-mono text-xs font-bold text-[#00636b]">
-                      {batch.code}
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-semibold text-slate-900 text-sm">
-                        {batch.name}
-                      </div>
-                      <div className="text-[11px] text-slate-500">
-                        {classLevelLabels[batch.classLevel] || batch.classLevel}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-700">
-                      {batch.academicSession?.name || "চলতি সেশন"}
-                    </TableCell>
-                    <TableCell>
-                      {batch.assignedTeachers?.length ? (
-                        <div className="text-xs text-slate-800">
-                          {batch.assignedTeachers.map((t) => t.fullName).join(", ")}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-slate-400">নির্ধারিত নেই</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-xs font-medium text-slate-800">
-                        আসন: {toBanglaNumber(batch.capacity)} টি
-                      </div>
-                      <div className="text-[11px] text-slate-500">
-                        মাসিক: {formatBanglaCurrency(batch.monthlyFee)}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs font-normal">
-                        সপ্তাহে {toBanglaNumber(batch.schedule?.length || 0)} দিন
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={batch.status === "active" ? "success" : "secondary"}
-                        className="text-xs"
-                      >
-                        {batch.status === "active" ? "চলমান" : batch.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={() => openDetailDialog(batch)}
-                        className="text-slate-600 hover:text-[#00636b]"
-                        title="বিস্তারিত দেখুন"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={() => openEditDialog(batch)}
-                        className="text-blue-600 hover:bg-blue-50"
-                        title="সম্পাদনা"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      {batch.status === "active" && (
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          onClick={() => {
-                            setTargetBatch(batch);
-                            setArchiveDialogOpen(true);
-                          }}
-                          className="text-amber-600 hover:bg-amber-50"
-                          title="আর্কাইভ/সমাপ্ত"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </TableCell>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>কোড</TableHead>
+                    <TableHead>ব্যাচের নাম ও শ্রেণি</TableHead>
+                    <TableHead>শিক্ষাবর্ষ</TableHead>
+                    <TableHead>নির্ধারিত শিক্ষক</TableHead>
+                    <TableHead>আসন ও ফি</TableHead>
+                    <TableHead>সাপ্তাহিক ক্লাস</TableHead>
+                    <TableHead>স্ট্যাটাস</TableHead>
+                    <TableHead className="text-right">কার্যক্রম</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {batches.map((batch) => (
+                    <TableRow key={batch._id} className="hover:bg-slate-50">
+                      <TableCell className="font-mono text-xs font-bold text-[#00636b]">
+                        {batch.code}
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-semibold text-slate-900 text-sm">
+                          {batch.name}
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                          {classLevelLabels[batch.classLevel] || batch.classLevel}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-700">
+                        {batch.academicSession?.name || "চলতি সেশন"}
+                      </TableCell>
+                      <TableCell>
+                        {batch.assignedTeachers?.length ? (
+                          <div className="text-xs text-slate-800">
+                            {batch.assignedTeachers.map((t) => t.fullName).join(", ")}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400">নির্ধারিত নেই</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-xs font-medium text-slate-800">
+                          আসন: {toBanglaNumber(batch.capacity)} টি
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                          মাসিক: {formatBanglaCurrency(batch.monthlyFee)}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs font-normal">
+                          সপ্তাহে {toBanglaNumber(batch.schedule?.length || 0)} দিন
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={batch.status === "active" ? "success" : "secondary"}
+                          className="text-xs"
+                        >
+                          {batch.status === "active" ? "চলমান" : batch.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <ActionDropdown
+                          ariaLabel="ব্যাচ অ্যাকশন"
+                          items={getBatchActionItems(batch)}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile Cards View */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {batches.map((batch) => (
+                <div key={batch._id} className="p-4 bg-white hover:bg-slate-50/60 transition space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-[#00636b] bg-teal-50 px-2 py-0.5 rounded">
+                          {batch.code}
+                        </span>
+                        <Badge
+                          variant={batch.status === "active" ? "success" : "secondary"}
+                          className="text-[11px]"
+                        >
+                          {batch.status === "active" ? "চলমান" : batch.status}
+                        </Badge>
+                      </div>
+                      <h4 className="font-semibold text-slate-900 text-sm">{batch.name}</h4>
+                      <p className="text-[11px] text-slate-500">
+                        {classLevelLabels[batch.classLevel] || batch.classLevel} • {batch.academicSession?.name || "চলতি সেশন"}
+                      </p>
+                    </div>
+                    <ActionDropdown
+                      ariaLabel="ব্যাচ অ্যাকশন"
+                      items={getBatchActionItems(batch)}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-1.5 border-t border-slate-100">
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">নির্ধারিত শিক্ষক</span>
+                      <span className="text-slate-800 font-medium">
+                        {batch.assignedTeachers?.length
+                          ? batch.assignedTeachers.map((t) => t.fullName).join(", ")
+                          : "নির্ধারিত নেই"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">আসন ও ফি</span>
+                      <span className="text-slate-800 font-medium">
+                        আসন: {toBanglaNumber(batch.capacity)} টি
+                      </span>
+                      <p className="text-[11px] text-slate-500">
+                        মাসিক: {formatBanglaCurrency(batch.monthlyFee)}
+                      </p>
+                    </div>
+                    <div className="col-span-2">
+                      <Badge variant="outline" className="text-xs font-normal">
+                        সপ্তাহে {toBanglaNumber(batch.schedule?.length || 0)} দিন ক্লাস
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         {/* Pagination */}

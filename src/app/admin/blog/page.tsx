@@ -29,6 +29,7 @@ import {
   TableCell,
 } from "@/components/ui/Table";
 import { Pagination } from "@/components/ui/Pagination";
+import { ActionDropdown } from "@/components/ui/ActionDropdown";
 import { Alert } from "@/components/ui/Alert";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAppDispatch } from "@/store";
@@ -239,6 +240,22 @@ export default function BlogManagementPage() {
     }
   };
 
+  const getBlogActionItems = (post: BlogPostItem) => [
+    {
+      label: "তথ্য সম্পাদন",
+      icon: <Edit className="h-4 w-4" />,
+      onClick: () => openEditDialog(post),
+      variant: "warning" as const,
+    },
+    {
+      label: "আর্কাইভ করুন",
+      icon: <Archive className="h-4 w-4" />,
+      onClick: () => handleArchivePost(post._id),
+      variant: "danger" as const,
+      hidden: post.status === "archived",
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -324,54 +341,85 @@ export default function BlogManagementPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ব্লগ শিরোনাম</TableHead>
-                  <TableHead>ট্যাগসমূহ</TableHead>
-                  <TableHead>পাঠ সংখ্যা (Views)</TableHead>
-                  <TableHead>প্রকাশের তারিখ</TableHead>
-                  <TableHead>স্ট্যাটাস</TableHead>
-                  <TableHead className="text-right">কার্যক্রম</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {posts.map((post) => (
-                  <TableRow key={post._id} className="hover:bg-slate-50">
-                    <TableCell>
-                      <div className="font-semibold text-slate-900 text-sm">
-                        {post.title}
-                      </div>
-                      <p className="text-xs text-slate-500 mt-0.5 truncate max-w-md">
-                        {post.summary}
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {post.tags?.map((tag, idx) => (
-                          <Badge
-                            key={idx}
-                            variant="outline"
-                            className="text-[11px] font-normal"
-                          >
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs text-slate-700">
-                      {toBanglaNumber(post.viewCount || 0)} বার
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-600">
-                      {post.publishedAt
-                        ? formatBanglaDate(post.publishedAt)
-                        : "অপ্রকাশিত"}
-                    </TableCell>
-                    <TableCell>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ব্লগ শিরোনাম</TableHead>
+                    <TableHead>ট্যাগসমূহ</TableHead>
+                    <TableHead>পাঠ সংখ্যা (Views)</TableHead>
+                    <TableHead>প্রকাশের তারিখ</TableHead>
+                    <TableHead>স্ট্যাটাস</TableHead>
+                    <TableHead className="text-right">কার্যক্রম</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {posts.map((post) => (
+                    <TableRow key={post._id} className="hover:bg-slate-50">
+                      <TableCell>
+                        <div className="font-semibold text-slate-900 text-sm">
+                          {post.title}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5 truncate max-w-md">
+                          {post.summary}
+                        </p>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {post.tags?.map((tag, idx) => (
+                            <Badge
+                              key={idx}
+                              variant="outline"
+                              className="text-[11px] font-normal"
+                            >
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-slate-700">
+                        {toBanglaNumber(post.viewCount || 0)} বার
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-600">
+                        {post.publishedAt
+                          ? formatBanglaDate(post.publishedAt)
+                          : "অপ্রকাশিত"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={post.status === "published" ? "success" : "secondary"}
+                          className="text-xs"
+                        >
+                          {post.status === "published"
+                            ? "প্রকাশিত"
+                            : post.status === "draft"
+                              ? "খসড়া"
+                              : "আর্কাইভকৃত"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <ActionDropdown
+                          ariaLabel="ব্লগ অ্যাকশন"
+                          items={getBlogActionItems(post)}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile Cards View */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {posts.map((post) => (
+                <div key={post._id} className="p-4 bg-white hover:bg-slate-50/60 transition space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-1">
                       <Badge
                         variant={post.status === "published" ? "success" : "secondary"}
-                        className="text-xs"
+                        className="text-[10px]"
                       >
                         {post.status === "published"
                           ? "প্রকাশিত"
@@ -379,34 +427,47 @@ export default function BlogManagementPage() {
                             ? "খসড়া"
                             : "আর্কাইভকৃত"}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={() => openEditDialog(post)}
-                        className="text-blue-600 hover:bg-blue-50"
-                        title="সম্পাদনা"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      {post.status !== "archived" && (
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          onClick={() => handleArchivePost(post._id)}
-                          className="text-amber-600 hover:bg-amber-50"
-                          title="আর্কাইভ"
-                        >
-                          <Archive className="h-4 w-4" />
-                        </Button>
+                      <h4 className="font-semibold text-slate-900 text-sm">{post.title}</h4>
+                      {post.summary && (
+                        <p className="text-xs text-slate-500 line-clamp-2">{post.summary}</p>
                       )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                    </div>
+                    <ActionDropdown
+                      ariaLabel="ব্লগ অ্যাকশন"
+                      items={getBlogActionItems(post)}
+                    />
+                  </div>
+
+                  {post.tags && post.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {post.tags.map((tag, idx) => (
+                        <Badge
+                          key={idx}
+                          variant="outline"
+                          className="text-[10px] font-normal"
+                        >
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-1.5 border-t border-slate-100">
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">প্রকাশের তারিখ</span>
+                      <span className="text-slate-700 font-medium">
+                        {post.publishedAt ? formatBanglaDate(post.publishedAt) : "অপ্রকাশিত"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">পাঠ সংখ্যা (Views)</span>
+                      <span className="font-mono text-slate-700 font-medium">{toBanglaNumber(post.viewCount || 0)} বার</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         {/* Pagination */}

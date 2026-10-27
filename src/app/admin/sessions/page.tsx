@@ -19,14 +19,8 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Dialog } from "@/components/ui/Dialog";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@/components/ui/Table";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
+import { ActionDropdown } from "@/components/ui/ActionDropdown";
 import { Alert } from "@/components/ui/Alert";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAppDispatch } from "@/store";
@@ -215,6 +209,25 @@ export default function AcademicSessionManagementPage() {
     }
   };
 
+  const getSessionActionItems = (session: AcademicSessionItem) => [
+    {
+      label: "তথ্য সম্পাদন",
+      icon: <Edit className="h-4 w-4" />,
+      onClick: () => openEditDialog(session),
+      variant: "warning" as const,
+    },
+    {
+      label: "আর্কাইভ করুন",
+      icon: <Archive className="h-4 w-4" />,
+      onClick: () => {
+        setTargetSession(session);
+        setArchiveDialogOpen(true);
+      },
+      variant: "danger" as const,
+      hidden: session.status === "archived",
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -261,85 +274,117 @@ export default function AcademicSessionManagementPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>কোড</TableHead>
-                  <TableHead>শিক্ষাবর্ষের নাম</TableHead>
-                  <TableHead>শুরুর তারিখ</TableHead>
-                  <TableHead>সমাপ্তির তারিখ</TableHead>
-                  <TableHead>চলমান স্ট্যাটাস</TableHead>
-                  <TableHead>অবস্থা</TableHead>
-                  <TableHead className="text-right">কার্যক্রম</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sessions.map((session) => (
-                  <TableRow key={session._id} className="hover:bg-slate-50">
-                    <TableCell className="font-mono text-xs font-bold text-[#00636b]">
-                      {session.code}
-                    </TableCell>
-                    <TableCell className="font-semibold text-slate-900 text-sm">
-                      {session.name}
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-600">
-                      {formatBanglaDate(session.startDate)}
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-600">
-                      {formatBanglaDate(session.endDate)}
-                    </TableCell>
-                    <TableCell>
-                      {session.isCurrent ? (
-                        <Badge variant="success" className="text-xs">
-                          চলতি শিক্ষাবর্ষ (Active)
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-slate-400">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={session.status === "active" ? "outline" : "secondary"}
-                        className="text-xs"
-                      >
-                        {session.status === "active"
-                          ? "সক্রিয়"
-                          : session.status === "archived"
-                            ? "আর্কাইভকৃত"
-                            : session.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={() => openEditDialog(session)}
-                        className="text-blue-600 hover:bg-blue-50"
-                        title="সম্পাদনা"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      {session.status !== "archived" && (
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          onClick={() => {
-                            setTargetSession(session);
-                            setArchiveDialogOpen(true);
-                          }}
-                          className="text-amber-600 hover:bg-amber-50"
-                          title="আর্কাইভ করুন"
-                        >
-                          <Archive className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </TableCell>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>কোড</TableHead>
+                    <TableHead>শিক্ষাবর্ষের নাম</TableHead>
+                    <TableHead>শুরুর তারিখ</TableHead>
+                    <TableHead>সমাপ্তির তারিখ</TableHead>
+                    <TableHead>চলমান স্ট্যাটাস</TableHead>
+                    <TableHead>অবস্থা</TableHead>
+                    <TableHead className="text-right">কার্যক্রম</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {sessions.map((session) => (
+                    <TableRow key={session._id} className="hover:bg-slate-50">
+                      <TableCell className="font-mono text-xs font-bold text-[#00636b]">
+                        {session.code}
+                      </TableCell>
+                      <TableCell className="font-semibold text-slate-900 text-sm">
+                        {session.name}
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-600">
+                        {formatBanglaDate(session.startDate)}
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-600">
+                        {formatBanglaDate(session.endDate)}
+                      </TableCell>
+                      <TableCell>
+                        {session.isCurrent ? (
+                          <Badge variant="success" className="text-xs">
+                            চলতি শিক্ষাবর্ষ (Active)
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-slate-400">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={session.status === "active" ? "outline" : "secondary"}
+                          className="text-xs"
+                        >
+                          {session.status === "active"
+                            ? "সক্রিয়"
+                            : session.status === "archived"
+                              ? "আর্কাইভকৃত"
+                              : session.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <ActionDropdown
+                          ariaLabel="সেশন অ্যাকশন"
+                          items={getSessionActionItems(session)}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile Cards View */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {sessions.map((session) => (
+                <div key={session._id} className="p-4 bg-white hover:bg-slate-50/60 transition space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-xs font-bold text-[#00636b] bg-teal-50 px-2 py-0.5 rounded">
+                          {session.code}
+                        </span>
+                        {session.isCurrent && (
+                          <Badge variant="success" className="text-[10px]">
+                            চলতি শিক্ষাবর্ষ
+                          </Badge>
+                        )}
+                        <Badge
+                          variant={session.status === "active" ? "outline" : "secondary"}
+                          className="text-[10px]"
+                        >
+                          {session.status === "active"
+                            ? "সক্রিয়"
+                            : session.status === "archived"
+                              ? "আর্কাইভকৃত"
+                              : session.status}
+                        </Badge>
+                      </div>
+                      <h4 className="font-semibold text-slate-900 text-sm">{session.name}</h4>
+                    </div>
+                    <ActionDropdown
+                      ariaLabel="সেশন অ্যাকশন"
+                      items={getSessionActionItems(session)}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-1.5 border-t border-slate-100">
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">শুরুর তারিখ</span>
+                      <span className="text-slate-700 font-medium">{formatBanglaDate(session.startDate)}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">সমাপ্তির তারিখ</span>
+                      <span className="text-slate-700 font-medium">{formatBanglaDate(session.endDate)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </Card>
 
