@@ -11,6 +11,7 @@ import {
 } from "@/lib/db-utils";
 import { Teacher } from "@/models/Teacher";
 import { User } from "@/models/User";
+import { Student } from "@/models/Student";
 import { Batch } from "@/models/Batch";
 
 interface RouteParams {
@@ -87,9 +88,33 @@ export const PATCH = createApiHandler(
     const updateData: Record<string, unknown> = { ...validated };
     delete updateData.password;
 
-    if (validated.phone) {
-      updateData.phone = normalizePhoneNumber(validated.phone);
+    const teacher = await Teacher.findById(id);
+    if (!teacher) {
+      throw AppError.notFound("Teacher not found", "শিক্ষক রেকর্ডটি খুঁজে পাওয়া যায়নি।");
     }
+
+    let normalizedPhone: string | undefined;
+    if (validated.phone) {
+      normalizedPhone = normalizePhoneNumber(validated.phone);
+      if (normalizedPhone !== teacher.phone) {
+        // Ensure new phone is unique across all Users, Teachers, and Students
+        const [existingUser, existingTeacher, existingStudent] = await Promise.all([
+          User.findOne({ phone: normalizedPhone, _id: { $ne: teacher.userId } }),
+          Teacher.findOne({ phone: normalizedPhone, _id: { $ne: teacher._id } }),
+          Student.findOne({ phone: normalizedPhone }),
+        ]);
+
+        if (existingUser || existingTeacher || existingStudent) {
+          throw AppError.conflict(
+            "Phone already registered",
+            "এই মোবাইল নম্বরটি দিয়ে ইতোমধ্যে একটি অ্যাকাউন্ট রয়েছে। অনুগ্রহ করে অন্য মোবাইল নম্বর ব্যবহার করুন।",
+            { phone: ["এই মোবাইল নম্বরটি দিয়ে ইতোমধ্যে একটি অ্যাকাউন্ট রয়েছে। অনুগ্রহ করে অন্য নম্বর ব্যবহার করুন।"] }
+          );
+        }
+        updateData.phone = normalizedPhone;
+      }
+    }
+
     if (validated.email !== undefined) {
       updateData.email = normalizeEmail(validated.email);
     }
@@ -104,32 +129,18 @@ export const PATCH = createApiHandler(
       throw AppError.notFound("Teacher not found", "শিক্ষক রেকর্ডটি খুঁজে পাওয়া যায়নি।");
     }
 
-    // Handle teacher user account, avatar and password update
-    if (validated.password || validated.avatarUrl) {
-      let user = updatedTeacher.userId
-        ? await User.findById(updatedTeacher.userId)
-        : await User.findOne({ phone: updatedTeacher.phone });
-
+    // Handle teacher user account, phone, avatar and password update
+    if (updatedTeacher.userId) {
+      const user = await User.findById(updatedTeacher.userId);
       if (user) {
+        if (normalizedPhone && normalizedPhone !== user.phone) {
+          user.phone = normalizedPhone;
+        }
+        if (validated.fullName) user.fullName = validated.fullName.trim();
         if (validated.password) user.password = validated.password;
         if (validated.avatarUrl) user.avatarUrl = validated.avatarUrl;
+        if (validated.email !== undefined) user.email = normalizeEmail(validated.email) || undefined;
         await user.save();
-        if (!updatedTeacher.userId) {
-          updatedTeacher.userId = user._id;
-          await updatedTeacher.save();
-        }
-      } else {
-        user = await User.create({
-          phone: updatedTeacher.phone,
-          fullName: updatedTeacher.fullName,
-          password: validated.password || "123456",
-          email: updatedTeacher.email || undefined,
-          avatarUrl: validated.avatarUrl || undefined,
-          role: "teacher",
-          isActive: true,
-        });
-        updatedTeacher.userId = user._id;
-        await updatedTeacher.save();
       }
     }
 

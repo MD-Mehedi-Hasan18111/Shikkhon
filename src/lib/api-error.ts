@@ -54,9 +54,10 @@ export class AppError extends Error {
 
   static conflict(
     message = "Resource already exists",
-    banglaMessage = "তথ্যটি ইতিমধ্যে বিদ্যমান রয়েছে।"
+    banglaMessage = "তথ্যটি ইতিমধ্যে বিদ্যমান রয়েছে।",
+    errors?: Record<string, string[]> | string[] | unknown
   ) {
-    return new AppError(message, 409, banglaMessage);
+    return new AppError(message, 409, banglaMessage, errors);
   }
 
   static validation(

@@ -11,9 +11,11 @@ import {
 } from "@/lib/rbac";
 import { Student } from "@/models/Student";
 import { User } from "@/models/User";
+import { Teacher } from "@/models/Teacher";
 import { Enrollment } from "@/models/Enrollment";
 import { Attendance } from "@/models/Attendance";
 import { Result } from "@/models/Result";
+import { normalizePhoneNumber, normalizeEmail } from "@/lib/db-utils";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -115,8 +117,50 @@ export const PATCH = createApiHandler(
     const body = await req.json();
     const validated = updateStudentSchema.parse(body);
 
+    const student = await Student.findById(id);
+    if (!student) {
+      throw AppError.notFound(
+        "Student not found",
+        "শিক্ষার্থী রেকর্ড খুঁজে পাওয়া যায়নি।"
+      );
+    }
+
     const updatePayload: Record<string, unknown> = { ...validated };
     delete updatePayload.password;
+
+    let normalizedPhone: string | undefined;
+    if (validated.phone) {
+      normalizedPhone = normalizePhoneNumber(validated.phone);
+      if (normalizedPhone !== student.phone) {
+        // Ensure new phone is unique across all Users, Students, and Teachers
+        const [existingUser, existingStudent, existingTeacher] = await Promise.all([
+          User.findOne({ phone: normalizedPhone, _id: { $ne: student.userId } }),
+          Student.findOne({ phone: normalizedPhone, _id: { $ne: student._id } }),
+          Teacher.findOne({ phone: normalizedPhone }),
+        ]);
+
+        if (existingUser || existingStudent || existingTeacher) {
+          throw AppError.conflict(
+            "Phone already registered",
+            "এই মোবাইল নম্বরটি দিয়ে ইতোমধ্যে একটি অ্যাকাউন্ট রয়েছে। অনুগ্রহ করে অন্য মোবাইল নম্বর ব্যবহার করুন।",
+            { phone: ["এই মোবাইল নম্বরটি দিয়ে ইতোমধ্যে একটি অ্যাকাউন্ট রয়েছে। অনুগ্রহ করে অন্য নম্বর ব্যবহার করুন।"] }
+          );
+        }
+        updatePayload.phone = normalizedPhone;
+      }
+    }
+
+    if (validated.email !== undefined) {
+      updatePayload.email = normalizeEmail(validated.email);
+    }
+
+    if (validated.guardian?.phone) {
+      updatePayload.guardian = {
+        ...student.guardian,
+        ...validated.guardian,
+        phone: normalizePhoneNumber(validated.guardian.phone),
+      };
+    }
 
     const updatedStudent = await Student.findByIdAndUpdate(
       id,
@@ -131,32 +175,18 @@ export const PATCH = createApiHandler(
       );
     }
 
-    // Handle student user account, avatar and password update
-    if (validated.password || validated.avatarUrl) {
-      let user = updatedStudent.userId
-        ? await User.findById(updatedStudent.userId)
-        : await User.findOne({ phone: updatedStudent.phone });
-
+    // Handle student user account, phone, avatar and password update
+    if (updatedStudent.userId) {
+      const user = await User.findById(updatedStudent.userId);
       if (user) {
+        if (normalizedPhone && normalizedPhone !== user.phone) {
+          user.phone = normalizedPhone;
+        }
+        if (validated.fullName) user.fullName = validated.fullName.trim();
         if (validated.password) user.password = validated.password;
         if (validated.avatarUrl) user.avatarUrl = validated.avatarUrl;
+        if (validated.email !== undefined) user.email = normalizeEmail(validated.email) || undefined;
         await user.save();
-        if (!updatedStudent.userId) {
-          updatedStudent.userId = user._id;
-          await updatedStudent.save();
-        }
-      } else {
-        user = await User.create({
-          phone: updatedStudent.phone,
-          fullName: updatedStudent.fullName,
-          password: validated.password || "123456",
-          email: updatedStudent.email || undefined,
-          avatarUrl: validated.avatarUrl || undefined,
-          role: "student",
-          isActive: true,
-        });
-        updatedStudent.userId = user._id;
-        await updatedStudent.save();
       }
     }
 

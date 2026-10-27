@@ -12,6 +12,7 @@ import {
 } from "@/lib/db-utils";
 import { Student } from "@/models/Student";
 import { User } from "@/models/User";
+import { Teacher } from "@/models/Teacher";
 
 const createStudentSchema = z.object({
   fullName: z.string().trim().min(2, "পুরো নাম কমপক্ষে ২ অক্ষরের হতে হবে"),
@@ -131,36 +132,41 @@ export const POST = createApiHandler(
       studentId = `S-${year}-${String(count + 1).padStart(4, "0")}`;
     }
 
-    // Check duplicate studentId
+    // 1. Check duplicate studentId
     const existingStudentId = await Student.findOne({ studentId });
     if (existingStudentId) {
       throw AppError.conflict(
         "Student ID already exists",
-        `এই শিক্ষার্থী আইডি (${studentId}) ইতিমধ্যে নিবন্ধিত রয়েছে।`
+        `এই শিক্ষার্থী আইডি (${studentId}) ইতিমধ্যে নিবন্ধিত রয়েছে।`,
+        { studentId: [`এই শিক্ষার্থী আইডি (${studentId}) ইতিমধ্যে নিবন্ধিত রয়েছে।`] }
       );
     }
 
-    // Create or link User account for student dashboard access
-    let user = await User.findOne({ phone: normalizedPhone });
-    if (!user) {
-      user = await User.create({
-        phone: normalizedPhone,
-        fullName: validated.fullName,
-        password: validated.password || "123456",
-        email: normalizeEmail(validated.email) || undefined,
-        role: "student",
-        avatarUrl: validated.avatarUrl || undefined,
-        isActive: true,
-      });
-    } else {
-      if (validated.password) {
-        user.password = validated.password;
-      }
-      if (validated.avatarUrl) {
-        user.avatarUrl = validated.avatarUrl;
-      }
-      await user.save();
+    // 2. Strictly ensure the phone number is unique across all Users, Students, and Teachers
+    const [existingUser, existingStudent, existingTeacher] = await Promise.all([
+      User.findOne({ phone: normalizedPhone }),
+      Student.findOne({ phone: normalizedPhone }),
+      Teacher.findOne({ phone: normalizedPhone }),
+    ]);
+
+    if (existingUser || existingStudent || existingTeacher) {
+      throw AppError.conflict(
+        "Phone already registered",
+        "এই মোবাইল নম্বরটি দিয়ে ইতোমধ্যে একটি অ্যাকাউন্ট রয়েছে। অনুগ্রহ করে অন্য মোবাইল নম্বর ব্যবহার করুন।",
+        { phone: ["এই মোবাইল নম্বরটি দিয়ে ইতোমধ্যে একটি অ্যাকাউন্ট রয়েছে। অনুগ্রহ করে অন্য নম্বর ব্যবহার করুন।"] }
+      );
     }
+
+    // 3. Create fresh User account for student dashboard access
+    const user = await User.create({
+      phone: normalizedPhone,
+      fullName: validated.fullName,
+      password: validated.password || "123456",
+      email: normalizeEmail(validated.email) || undefined,
+      role: "student",
+      avatarUrl: validated.avatarUrl || undefined,
+      isActive: true,
+    });
 
     const newStudent = await Student.create({
       studentId,

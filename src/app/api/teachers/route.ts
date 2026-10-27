@@ -12,6 +12,7 @@ import {
 } from "@/lib/db-utils";
 import { Teacher } from "@/models/Teacher";
 import { User } from "@/models/User";
+import { Student } from "@/models/Student";
 
 const createTeacherSchema = z.object({
   fullName: z.string().trim().min(2, "শিক্ষকের নাম কমপক্ষে ২ অক্ষরের হতে হবে"),
@@ -118,41 +119,41 @@ export const POST = createApiHandler(
       teacherCode = `TCH-${String(count + 1).padStart(3, "0")}`;
     }
 
-    // Check duplicate phone or teacherCode
-    const existingTeacher = await Teacher.findOne({
-      $or: [{ phone: normalizedPhone }, { teacherCode }],
-    });
-
-    if (existingTeacher) {
-      if (existingTeacher.teacherCode === teacherCode) {
-        throw AppError.conflict(
-          "Teacher code already exists",
-          `এই শিক্ষক কোড (${teacherCode}) ইতিমধ্যে ব্যবহৃত হয়েছে।`
-        );
-      }
+    // 1. Check duplicate teacherCode
+    const existingTeacherCode = await Teacher.findOne({ teacherCode });
+    if (existingTeacherCode) {
       throw AppError.conflict(
-        "Phone already registered",
-        "এই মোবাইল নম্বর দিয়ে ইতিমধ্যে একজন শিক্ষক নিবন্ধিত আছেন।"
+        "Teacher code already exists",
+        `এই শিক্ষক কোড (${teacherCode}) ইতিমধ্যে ব্যবহৃত হয়েছে।`,
+        { teacherCode: [`এই শিক্ষক কোড (${teacherCode}) ইতিমধ্যে ব্যবহৃত হয়েছে।`] }
       );
     }
 
-    // Create or link User account for teacher dashboard access
-    let user = await User.findOne({ phone: normalizedPhone });
-    if (!user) {
-      user = await User.create({
-        phone: normalizedPhone,
-        fullName: validated.fullName,
-        password: validated.password || "123456",
-        email: normalizeEmail(validated.email) || undefined,
-        role: "teacher",
-        isActive: true,
-      });
-    } else {
-      if (validated.password) {
-        user.password = validated.password;
-        await user.save();
-      }
+    // 2. Strictly ensure the phone number is unique across all Users, Teachers, and Students
+    const [existingUser, existingTeacher, existingStudent] = await Promise.all([
+      User.findOne({ phone: normalizedPhone }),
+      Teacher.findOne({ phone: normalizedPhone }),
+      Student.findOne({ phone: normalizedPhone }),
+    ]);
+
+    if (existingUser || existingTeacher || existingStudent) {
+      throw AppError.conflict(
+        "Phone already registered",
+        "এই মোবাইল নম্বরটি দিয়ে ইতোমধ্যে একটি অ্যাকাউন্ট রয়েছে। অনুগ্রহ করে অন্য মোবাইল নম্বর ব্যবহার করুন।",
+        { phone: ["এই মোবাইল নম্বরটি দিয়ে ইতোমধ্যে একটি অ্যাকাউন্ট রয়েছে। অনুগ্রহ করে অন্য নম্বর ব্যবহার করুন।"] }
+      );
     }
+
+    // 3. Create fresh User account for the teacher
+    const user = await User.create({
+      phone: normalizedPhone,
+      fullName: validated.fullName,
+      password: validated.password || "123456",
+      email: normalizeEmail(validated.email) || undefined,
+      avatarUrl: validated.avatarUrl || undefined,
+      role: "teacher",
+      isActive: true,
+    });
 
     const newTeacher = await Teacher.create({
       teacherCode,

@@ -34,6 +34,7 @@ const StudentSchema = new Schema<IStudentDocument>(
     phone: {
       type: String,
       required: [true, "শিক্ষার্থীর মোবাইল নম্বর আবশ্যক"],
+      unique: true,
       trim: true,
       set: (val: string) => normalizePhoneNumber(val),
       validate: {
