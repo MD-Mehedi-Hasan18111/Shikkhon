@@ -54,10 +54,21 @@ export const GET = createApiHandler(
       }
       filter.student = student._id;
     } else if (searchParams.get("student")) {
-      filter.student = searchParams.get("student");
+      const sId = searchParams.get("student");
+      if (sId && mongoose.Types.ObjectId.isValid(sId)) {
+        filter.student = new mongoose.Types.ObjectId(sId);
+      } else {
+        filter.student = sId;
+      }
     }
 
-    if (batchId) filter.batch = batchId;
+    if (batchId) {
+      if (mongoose.Types.ObjectId.isValid(batchId)) {
+        filter.batch = new mongoose.Types.ObjectId(batchId);
+      } else {
+        filter.batch = batchId;
+      }
+    }
     if (classLevel) filter.classLevel = classLevel;
     if (month) filter.month = Number(month);
     if (year) filter.year = Number(year);

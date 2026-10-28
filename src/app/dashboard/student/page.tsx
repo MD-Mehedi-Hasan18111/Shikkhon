@@ -15,13 +15,14 @@ import {
   CheckCircle2,
   AlertCircle,
   HelpCircle,
+  CreditCard,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { toBanglaNumber, formatBanglaDate, formatTo12h } from "@/lib/utils";
+import { toBanglaNumber, formatBanglaDate, formatTo12h, formatBanglaCurrency } from "@/lib/utils";
 
 const daysOfWeekBangla: Record<string, string> = {
   saturday: "শনিবার",
@@ -52,25 +53,28 @@ export default function StudentOverviewDashboard() {
   const [attendanceSummary, setAttendanceSummary] = useState<any>(null);
   const [results, setResults] = useState<any[]>([]);
   const [notices, setNotices] = useState<any[]>([]);
+  const [paymentSummary, setPaymentSummary] = useState<any>(null);
 
   const fetchStudentData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [meRes, batchesRes, attRes, resultsRes, noticesRes] = await Promise.all([
+      const [meRes, batchesRes, attRes, resultsRes, noticesRes, paymentsRes] = await Promise.all([
         fetch("/api/auth/me"),
         fetch("/api/batches"),
         fetch("/api/attendance"),
         fetch("/api/results?limit=4"),
         fetch("/api/notices?limit=3"),
+        fetch("/api/payments?limit=1"),
       ]);
 
-      const [meJson, batchesJson, attJson, resultsJson, noticesJson] = await Promise.all([
+      const [meJson, batchesJson, attJson, resultsJson, noticesJson, paymentsJson] = await Promise.all([
         meRes.json(),
         batchesRes.json(),
         attRes.json(),
         resultsRes.json(),
         noticesRes.json(),
+        paymentsRes.json(),
       ]);
 
       if (meJson.success) {
@@ -87,6 +91,9 @@ export default function StudentOverviewDashboard() {
       }
       if (noticesJson.success) {
         setNotices(noticesJson.data || []);
+      }
+      if (paymentsJson.success && paymentsJson.data?.summary) {
+        setPaymentSummary(paymentsJson.data.summary);
       }
     } catch {
       setError("ড্যাশবোর্ড তথ্য লোড করা যায়নি। ইন্টারনেট সংযোগ পরীক্ষা করুন।");
@@ -191,9 +198,47 @@ export default function StudentOverviewDashboard() {
                 <span>আমার ব্যাচসূচী</span>
               </Button>
             </Link>
+            <Link href="/dashboard/student/payments">
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-white/10 hover:bg-white/20 text-white border-white/20 flex items-center gap-1.5"
+              >
+                <CreditCard className="h-4 w-4" />
+                <span>ফি ও পেমেন্ট</span>
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
+
+      {/* Due Fee Alert Banner (if any due exists) */}
+      {paymentSummary && paymentSummary.totalDue > 0 && (
+        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-rose-100 flex items-center justify-center text-rose-700 shrink-0">
+              <AlertCircle className="h-5 w-5" />
+            </div>
+            <div>
+              <span className="font-bold text-rose-900 block text-sm">
+                আপনার ফি বকেয়া রয়েছে: {formatBanglaCurrency(paymentSummary.totalDue)}
+              </span>
+              <span className="text-rose-700 text-xs">
+                কোচিং অফিসে অথবা নির্ধারিত মাধ্যমে দ্রুত ফি পরিশোধ করে ডিজিটাল মানি রসিদ সংগ্রহ করুন।
+              </span>
+            </div>
+          </div>
+          <Link href="/dashboard/student/payments" className="shrink-0">
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full sm:w-auto text-rose-900 border-rose-300 hover:bg-rose-100 font-semibold"
+            >
+              পেমেন্ট হিস্ট্রি ও রসিদ
+            </Button>
+          </Link>
+        </div>
+      )}
 
       {/* Metric Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
