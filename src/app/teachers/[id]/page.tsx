@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { getTeacherById, getSiteSettings } from "@/lib/public-data";
-import { toBanglaNumber, formatBanglaDate } from "@/lib/utils";
+import { toBanglaNumber, formatBanglaDate, formatTo12h } from "@/lib/utils";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -296,8 +296,8 @@ export default async function TeacherDetailPage({ params }: PageProps) {
                                     <strong className="text-slate-700">
                                       {dayMap[item.day] || item.day}:
                                     </strong>{" "}
-                                    {toBanglaNumber(item.startTime)} -{" "}
-                                    {toBanglaNumber(item.endTime)}
+                                    {formatTo12h(item.startTime)} –{" "}
+                                    {formatTo12h(item.endTime)}
                                     {item.roomNo && ` (${item.roomNo})`}
                                   </span>
                                 </div>

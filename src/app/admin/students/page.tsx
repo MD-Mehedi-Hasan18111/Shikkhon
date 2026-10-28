@@ -112,6 +112,9 @@ interface BatchOption {
   code: string;
   capacity: number;
   classLevel: string;
+  enrolledCount?: number;
+  availableSeats?: number;
+  isFull?: boolean;
 }
 
 const classLevelOptions = [
@@ -406,6 +409,26 @@ export default function StudentManagementPage() {
         })
       );
       return;
+    }
+
+    // Capacity limit check
+    const selectedBatch = availableBatches.find((b) => b._id === selectedBatchId);
+    if (selectedBatch) {
+      const isBatchFull =
+        selectedBatch.isFull ||
+        (selectedBatch.availableSeats !== undefined && selectedBatch.availableSeats <= 0) ||
+        (selectedBatch.enrolledCount !== undefined && selectedBatch.enrolledCount >= selectedBatch.capacity);
+
+      if (isBatchFull) {
+        dispatch(
+          addNotification({
+            type: "error",
+            title: "আসন পূর্ণ",
+            message: `নির্বাচিত ব্যাচটির (${selectedBatch.name}) সর্বোচ্চ আসন সংখ্যা (${selectedBatch.capacity}) পূর্ণ হয়ে গেছে। আসন খালি না হওয়া পর্যন্ত নতুন শিক্ষার্থী ভর্তি সম্ভব নয়।`,
+          })
+        );
+        return;
+      }
     }
 
     setEnrollLoading(true);
@@ -1309,8 +1332,17 @@ export default function StudentManagementPage() {
             </Button>
             <Button
               onClick={handleEnrollSubmit}
-              disabled={enrollLoading || !selectedBatchId}
-              className="bg-[#00636b] hover:bg-[#004f55] text-white"
+              disabled={
+                enrollLoading ||
+                !selectedBatchId ||
+                availableBatches.find((b) => b._id === selectedBatchId)?.isFull ||
+                (availableBatches.find((b) => b._id === selectedBatchId)?.availableSeats !== undefined &&
+                  availableBatches.find((b) => b._id === selectedBatchId)!.availableSeats! <= 0) ||
+                (availableBatches.find((b) => b._id === selectedBatchId)?.enrolledCount !== undefined &&
+                  availableBatches.find((b) => b._id === selectedBatchId)!.enrolledCount! >=
+                    availableBatches.find((b) => b._id === selectedBatchId)!.capacity)
+              }
+              className="bg-[#00636b] hover:bg-[#004f55] text-white disabled:opacity-50"
             >
               {enrollLoading ? "ভর্তি হচ্ছে..." : "ভর্তি নিশ্চিত করুন"}
             </Button>
@@ -1327,13 +1359,67 @@ export default function StudentManagementPage() {
               onChange={(e) => setSelectedBatchId(e.target.value)}
               options={[
                 { value: "", label: "ব্যাচ নির্বাচন করুন..." },
-                ...availableBatches.map((b) => ({
-                  value: b._id,
-                  label: `${b.name} (${classLevelLabels[b.classLevel] || b.classLevel}) - আসন: ${b.capacity}`,
-                })),
+                ...availableBatches.map((b) => {
+                  const isFull =
+                    b.isFull ||
+                    (b.availableSeats !== undefined && b.availableSeats <= 0) ||
+                    (b.enrolledCount !== undefined && b.enrolledCount >= b.capacity);
+                  const seatInfo = isFull
+                    ? `[আসন পূর্ণ - ${b.capacity}/${b.capacity}]`
+                    : `[ফাঁকা: ${b.availableSeats !== undefined ? b.availableSeats : b.capacity} / মোট: ${b.capacity}]`;
+                  return {
+                    value: b._id,
+                    label: `${b.name} (${classLevelLabels[b.classLevel] || b.classLevel}) ${seatInfo}`,
+                    disabled: isFull,
+                  };
+                }),
               ]}
             />
           </div>
+
+          {/* Real-time Selected Batch Capacity Status */}
+          {selectedBatchId && (() => {
+            const b = availableBatches.find((item) => item._id === selectedBatchId);
+            if (!b) return null;
+            const isFull =
+              b.isFull ||
+              (b.availableSeats !== undefined && b.availableSeats <= 0) ||
+              (b.enrolledCount !== undefined && b.enrolledCount >= b.capacity);
+            const remaining =
+              b.availableSeats !== undefined
+                ? b.availableSeats
+                : Math.max(0, b.capacity - (b.enrolledCount || 0));
+
+            return (
+              <div
+                className={`p-3 rounded-xl border text-xs flex items-center justify-between transition ${
+                  isFull
+                    ? "bg-rose-50 border-rose-200 text-rose-800"
+                    : "bg-emerald-50 border-emerald-200 text-emerald-900"
+                }`}
+              >
+                <div>
+                  <span className="font-bold block text-slate-900">
+                    {b.name} ({b.code})
+                  </span>
+                  <span className="text-[11px] text-slate-600">
+                    সর্বোচ্চ ধারণক্ষমতা: {toBanglaNumber(b.capacity)} জন | বর্তমান ভর্তি: {toBanglaNumber(b.enrolledCount || 0)} জন
+                  </span>
+                </div>
+                <div>
+                  {isFull ? (
+                    <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-200 text-rose-900 shadow-2xs">
+                      ⛔ আসন পূর্ণ (ভর্তি নিষিদ্ধ)
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-200 text-emerald-900 shadow-2xs">
+                      ✓ অবশিষ্ট আসন: {toBanglaNumber(remaining)} টি
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="grid grid-cols-2 gap-3">
             <div>

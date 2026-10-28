@@ -82,7 +82,14 @@ export default function EnrollmentManagementPage() {
 
   // Supporting Batches for transfer
   const [activeBatches, setActiveBatches] = useState<
-    Array<{ _id: string; name: string; capacity: number }>
+    Array<{
+      _id: string;
+      name: string;
+      capacity: number;
+      enrolledCount?: number;
+      availableSeats?: number;
+      isFull?: boolean;
+    }>
   >([]);
 
   // Transfer Dialog
@@ -149,6 +156,26 @@ export default function EnrollmentManagementPage() {
   // 3. Submit Batch Transfer
   const handleTransferSubmit = async () => {
     if (!targetEnrollment || !transferTargetBatchId) return;
+
+    // Check target batch capacity
+    const targetBatch = activeBatches.find((b) => b._id === transferTargetBatchId);
+    if (targetBatch) {
+      const isTargetFull =
+        targetBatch.isFull ||
+        (targetBatch.availableSeats !== undefined && targetBatch.availableSeats <= 0) ||
+        (targetBatch.enrolledCount !== undefined && targetBatch.enrolledCount >= targetBatch.capacity);
+
+      if (isTargetFull) {
+        dispatch(
+          addNotification({
+            type: "error",
+            title: "আসন পূর্ণ",
+            message: `নির্বাচিত ব্যাচটির (${targetBatch.name}) সমস্ত আসন (${targetBatch.capacity}) পূর্ণ রয়েছে। আসন খালি না থাকলে স্থানান্তর করা সম্ভব নয়।`,
+          })
+        );
+        return;
+      }
+    }
 
     setTransferLoading(true);
     try {
@@ -529,13 +556,65 @@ export default function EnrollmentManagementPage() {
                 { value: "", label: "নতুন ব্যাচ নির্বাচন করুন..." },
                 ...activeBatches
                   .filter((b) => b._id !== targetEnrollment?.batch?._id)
-                  .map((b) => ({
-                    value: b._id,
-                    label: `${b.name} (আসন: ${b.capacity})`,
-                  })),
+                  .map((b) => {
+                    const isFull =
+                      b.isFull ||
+                      (b.availableSeats !== undefined && b.availableSeats <= 0) ||
+                      (b.enrolledCount !== undefined && b.enrolledCount >= b.capacity);
+                    const seatInfo = isFull
+                      ? `[আসন পূর্ণ - ${b.capacity}/${b.capacity}]`
+                      : `[ফাঁকা: ${b.availableSeats !== undefined ? b.availableSeats : b.capacity} / মোট: ${b.capacity}]`;
+                    return {
+                      value: b._id,
+                      label: `${b.name} ${seatInfo}`,
+                      disabled: isFull,
+                    };
+                  }),
               ]}
             />
           </div>
+
+          {/* Real-time Target Batch Capacity Alert */}
+          {transferTargetBatchId && (() => {
+            const b = activeBatches.find((item) => item._id === transferTargetBatchId);
+            if (!b) return null;
+            const isFull =
+              b.isFull ||
+              (b.availableSeats !== undefined && b.availableSeats <= 0) ||
+              (b.enrolledCount !== undefined && b.enrolledCount >= b.capacity);
+            const remaining =
+              b.availableSeats !== undefined
+                ? b.availableSeats
+                : Math.max(0, b.capacity - (b.enrolledCount || 0));
+
+            return (
+              <div
+                className={`p-3 rounded-xl border text-xs flex items-center justify-between transition ${
+                  isFull
+                    ? "bg-rose-50 border-rose-200 text-rose-800"
+                    : "bg-emerald-50 border-emerald-200 text-emerald-900"
+                }`}
+              >
+                <div>
+                  <span className="font-bold block text-slate-900">{b.name}</span>
+                  <span className="text-[11px] text-slate-600">
+                    ধারণক্ষমতা: {toBanglaNumber(b.capacity)} জন | বর্তমান ভর্তি: {toBanglaNumber(b.enrolledCount || 0)} জন
+                  </span>
+                </div>
+                <div>
+                  {isFull ? (
+                    <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-200 text-rose-900">
+                      ⛔ আসন পূর্ণ
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-200 text-emerald-900">
+                      ✓ ফাঁকা: {toBanglaNumber(remaining)} টি
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">
@@ -555,8 +634,17 @@ export default function EnrollmentManagementPage() {
           </Button>
           <Button
             onClick={handleTransferSubmit}
-            disabled={transferLoading || !transferTargetBatchId}
-            className="bg-[#00636b] hover:bg-[#004f55] text-white"
+            disabled={
+              transferLoading ||
+              !transferTargetBatchId ||
+              activeBatches.find((b) => b._id === transferTargetBatchId)?.isFull ||
+              (activeBatches.find((b) => b._id === transferTargetBatchId)?.availableSeats !== undefined &&
+                activeBatches.find((b) => b._id === transferTargetBatchId)!.availableSeats! <= 0) ||
+              (activeBatches.find((b) => b._id === transferTargetBatchId)?.enrolledCount !== undefined &&
+                activeBatches.find((b) => b._id === transferTargetBatchId)!.enrolledCount! >=
+                  activeBatches.find((b) => b._id === transferTargetBatchId)!.capacity)
+            }
+            className="bg-[#00636b] hover:bg-[#004f55] text-white disabled:opacity-50"
           >
             {transferLoading ? "স্থানান্তর হচ্ছে..." : "স্থানান্তর সম্পন্ন করুন"}
           </Button>

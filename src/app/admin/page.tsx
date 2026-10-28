@@ -26,7 +26,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Alert } from "@/components/ui/Alert";
-import { toBanglaNumber, formatBanglaDateFull } from "@/lib/utils";
+import { toBanglaNumber, formatBanglaDateFull, formatTo12h } from "@/lib/utils";
 import { FinancialChart } from "@/components/admin/FinancialChart";
 
 interface DashboardStatsData {
@@ -765,7 +765,7 @@ export default function AdminDashboardPage() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <Badge variant="secondary" className="font-mono text-xs">
-                        {item.startTime} - {item.endTime}
+                        {formatTo12h(item.startTime)} - {formatTo12h(item.endTime)}
                       </Badge>
                     </div>
                   </div>

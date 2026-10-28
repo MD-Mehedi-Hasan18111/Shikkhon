@@ -2,53 +2,16 @@
 
 import React, { useState, useEffect } from "react";
 import { Clock, Check, X, ArrowRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatTo12h } from "@/lib/utils";
 
-interface TimePicker12hProps {
+export { formatTo12h };
+
+export interface TimePicker12hProps {
   value: string; // e.g. "04:00 PM", "16:00", "10:30 AM"
   onChange: (time12h: string) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
-}
-
-// Convert 24h (e.g. "16:00") or 12h (e.g. "4:00 PM") to standard "04:00 PM"
-export function formatTo12h(timeStr: string): string {
-  if (!timeStr) return "";
-  const trimmed = timeStr.trim().toUpperCase();
-
-  // If already contains AM or PM
-  if (trimmed.includes("AM") || trimmed.includes("PM")) {
-    const parts = trimmed.split(/\s+/);
-    const timePart = parts[0];
-    const period = parts[1] || (trimmed.endsWith("PM") ? "PM" : "AM");
-    const [h, m = "00"] = timePart.split(":");
-    let hourNum = parseInt(h, 10);
-    if (isNaN(hourNum)) return trimmed;
-    if (hourNum === 0) hourNum = 12;
-    if (hourNum > 12) hourNum = hourNum % 12 || 12;
-    const hourStr = hourNum.toString().padStart(2, "0");
-    const minStr = (parseInt(m, 10) || 0).toString().padStart(2, "0");
-    return `${hourStr}:${minStr} ${period}`;
-  }
-
-  // If 24-hour format "HH:mm"
-  if (trimmed.includes(":")) {
-    const [h, m = "00"] = trimmed.split(":");
-    const hourNum = parseInt(h, 10);
-    const minNum = parseInt(m, 10) || 0;
-    if (isNaN(hourNum)) return timeStr;
-
-    const period = hourNum >= 12 ? "PM" : "AM";
-    let hour12 = hourNum % 12;
-    if (hour12 === 0) hour12 = 12;
-
-    const hourStr = hour12.toString().padStart(2, "0");
-    const minStr = minNum.toString().padStart(2, "0");
-    return `${hourStr}:${minStr} ${period}`;
-  }
-
-  return timeStr;
 }
 
 export function TimePicker12h({

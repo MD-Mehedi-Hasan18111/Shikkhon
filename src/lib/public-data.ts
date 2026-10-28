@@ -8,6 +8,7 @@ import { Event } from "@/models/Event";
 import { Batch } from "@/models/Batch";
 import { AcademicSession } from "@/models/AcademicSession";
 import { User } from "@/models/User";
+import { Enrollment } from "@/models/Enrollment";
 
 /**
  * Public Data Layer: Direct MongoDB queries for Next.js App Router Server Components
@@ -295,16 +296,63 @@ export async function getEventById(idOrSlug: string) {
   }
 }
 
+const classLevelOrder: Record<string, number> = {
+  class_6: 6,
+  class_7: 7,
+  class_8: 8,
+  class_9: 9,
+  class_10: 10,
+  hsc_1st: 11,
+  hsc_2nd: 12,
+  alim_1st: 13,
+  alim_2nd: 14,
+  admission: 15,
+};
+
 export async function getActiveBatchesWithDetails() {
   try {
     await connectToDatabase();
-    const batches = await Batch.find({ status: "active" })
+    const batches = await Batch.find({
+      status: { $in: ["active", "upcoming"] },
+    })
       .populate("academicSession", "name isCurrent")
       .populate("assignedTeachers", "fullName designation subjects")
-      .sort({ classLevel: 1, name: 1 })
       .lean();
-    return JSON.parse(JSON.stringify(batches));
+
+    const batchIds = batches.map((b) => b._id);
+    const enrollmentCounts = await Enrollment.aggregate([
+      { $match: { batch: { $in: batchIds }, status: "active" } },
+      { $group: { _id: "$batch", count: { $sum: 1 } } },
+    ]);
+    const countsMap = new Map<string, number>(
+      enrollmentCounts.map((e) => [String(e._id), e.count])
+    );
+
+    const result = batches.map((b) => {
+      const enrolledCount = countsMap.get(String(b._id)) || 0;
+      const capacity = Number(b.capacity) || 40;
+      const availableSeats = Math.max(0, capacity - enrolledCount);
+      const isFull = enrolledCount >= capacity;
+      return {
+        ...JSON.parse(JSON.stringify(b)),
+        capacity,
+        enrolledCount,
+        availableSeats,
+        isFull,
+      };
+    });
+
+    // Sort by class progression (Class 6 -> 10 -> HSC -> Alim -> Admission) and then by batch name
+    result.sort((a: any, b: any) => {
+      const orderA = classLevelOrder[a.classLevel] || 99;
+      const orderB = classLevelOrder[b.classLevel] || 99;
+      if (orderA !== orderB) return orderA - orderB;
+      return (a.name || "").localeCompare(b.name || "", "bn");
+    });
+
+    return result;
   } catch (error) {
+    console.error("❌ [PublicData] getActiveBatchesWithDetails error:", error);
     return [];
   }
 }

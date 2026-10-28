@@ -165,6 +165,14 @@ export const PATCH = createApiHandler(
       { new: true, runValidators: true }
     );
 
+    try {
+      const { revalidatePath } = await import("next/cache");
+      revalidatePath("/classes");
+      revalidatePath("/");
+    } catch {
+      // Ignore
+    }
+
     return apiSuccess(updatedBatch, "ব্যাচের তথ্য সফলভাবে আপডেট করা হয়েছে।");
   },
   { requireDb: true }
@@ -187,6 +195,14 @@ export const DELETE = createApiHandler(
     // Preservation of academic history: archive by marking completed
     batch.status = "completed";
     await batch.save();
+
+    try {
+      const { revalidatePath } = await import("next/cache");
+      revalidatePath("/classes");
+      revalidatePath("/");
+    } catch {
+      // Ignore
+    }
 
     return apiSuccess(
       batch,

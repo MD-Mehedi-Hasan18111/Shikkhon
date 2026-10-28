@@ -16,7 +16,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { toBanglaNumber } from "@/lib/utils";
+import { toBanglaNumber, formatTo12h } from "@/lib/utils";
 
 const daysOfWeekBangla: Record<string, string> = {
   saturday: "শনিবার",
@@ -181,8 +181,8 @@ export default function StudentBatchesPage() {
                               {daysOfWeekBangla[item.day] || item.day}
                             </span>
                             <span className="text-primary-800 font-semibold font-mono">
-                              {toBanglaNumber(item.startTime)} -{" "}
-                              {toBanglaNumber(item.endTime)}
+                              {formatTo12h(item.startTime)} –{" "}
+                              {formatTo12h(item.endTime)}
                             </span>
                           </div>
                           {item.roomNo && (

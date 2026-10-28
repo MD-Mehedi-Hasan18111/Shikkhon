@@ -901,7 +901,7 @@ export default function BatchManagementPage() {
                     <TimePicker12h
                       placeholder="04:00 PM"
                       value={row.startTime}
-                      onChange={(val) =>
+                      onChange={(val: string) =>
                         updateScheduleItem(idx, "startTime", val)
                       }
                     />
@@ -910,7 +910,7 @@ export default function BatchManagementPage() {
                     <TimePicker12h
                       placeholder="05:30 PM"
                       value={row.endTime}
-                      onChange={(val) => updateScheduleItem(idx, "endTime", val)}
+                      onChange={(val: string) => updateScheduleItem(idx, "endTime", val)}
                     />
                   </div>
                   <div className="col-span-2 text-right">

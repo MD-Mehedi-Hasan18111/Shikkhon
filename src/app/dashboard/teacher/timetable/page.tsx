@@ -14,7 +14,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { toBanglaNumber } from "@/lib/utils";
+import { toBanglaNumber, formatTo12h } from "@/lib/utils";
 
 const daysList = [
   { key: "saturday", label: "শনিবার" },
@@ -173,8 +173,8 @@ export default function TeacherTimetablePage() {
                           <div className="flex items-center gap-1.5 text-xs text-[#00636b] font-semibold">
                             <Clock className="h-3.5 w-3.5" />
                             <span>
-                              {toBanglaNumber(slot.startTime)} -{" "}
-                              {toBanglaNumber(slot.endTime)}
+                              {formatTo12h(slot.startTime)} –{" "}
+                              {formatTo12h(slot.endTime)}
                             </span>
                           </div>
 

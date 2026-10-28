@@ -1828,7 +1828,7 @@ export default function AdminPaymentsPage() {
               <Dialog
                 isOpen={receiptModalOpen}
                 onClose={() => setReceiptModalOpen(false)}
-                title="মানি রসিদ (Money Receipt - ২ কপি এক পৃষ্ঠায় প্রিন্ট)"
+                title="মানি রসিদ (Money Receipt)"
                 size="xl"
                 footer={
                   <>
@@ -1838,7 +1838,7 @@ export default function AdminPaymentsPage() {
                     >
                       বন্ধ করুন
                     </Button>
-                    <Button
+                    {/* <Button
                       variant="outline"
                       onClick={() => {
                         setSelectedDownloadPayment(selectedReceiptPayment);
@@ -1848,7 +1848,7 @@ export default function AdminPaymentsPage() {
                     >
                       <Download className="h-4 w-4" />
                       <span>রসিদ ডাউনলোড (Download)</span>
-                    </Button>
+                    </Button> */}
                     <Button
                       onClick={handlePrint}
                       className="bg-[#00636b] hover:bg-[#004e54] text-white gap-1.5 shadow-xs"

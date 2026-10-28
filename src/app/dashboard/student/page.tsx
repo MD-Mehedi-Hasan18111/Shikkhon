@@ -21,7 +21,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { toBanglaNumber, formatBanglaDate } from "@/lib/utils";
+import { toBanglaNumber, formatBanglaDate, formatTo12h } from "@/lib/utils";
 
 const daysOfWeekBangla: Record<string, string> = {
   saturday: "শনিবার",
@@ -332,8 +332,8 @@ export default function StudentOverviewDashboard() {
                         <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
                           <span className="flex items-center gap-1 font-semibold text-primary-800">
                             <Clock className="h-3.5 w-3.5 text-slate-400" />
-                            {toBanglaNumber(cls.startTime)} -{" "}
-                            {toBanglaNumber(cls.endTime)}
+                            {formatTo12h(cls.startTime)} –{" "}
+                            {formatTo12h(cls.endTime)}
                           </span>
                           {cls.roomNo && (
                             <span className="flex items-center gap-1 text-slate-500">

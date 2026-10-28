@@ -148,8 +148,30 @@ export const GET = createApiHandler(
       Batch.countDocuments(filter),
     ]);
 
+    // Compute active enrollment counts and available seats for each batch
+    const batchIds = batches.map((b) => b._id);
+    const enrollmentCounts = await Enrollment.aggregate([
+      { $match: { batch: { $in: batchIds }, status: "active" } },
+      { $group: { _id: "$batch", count: { $sum: 1 } } },
+    ]);
+    const countsMap = new Map<string, number>(
+      enrollmentCounts.map((e) => [String(e._id), e.count])
+    );
+
+    const batchesWithCapacity = batches.map((b) => {
+      const enrolledCount = countsMap.get(String(b._id)) || 0;
+      const availableSeats = Math.max(0, b.capacity - enrolledCount);
+      const isFull = enrolledCount >= b.capacity;
+      return {
+        ...b,
+        enrolledCount,
+        availableSeats,
+        isFull,
+      };
+    });
+
     const meta = buildPaginationMeta(page, limit, total);
-    return apiSuccess(batches, "ব্যাচসমূহের তালিকা পাওয়া গেছে।", meta);
+    return apiSuccess(batchesWithCapacity, "ব্যাচসমূহের তালিকা পাওয়া গেছে।", meta);
   },
   { requireDb: true }
 );
@@ -182,6 +204,14 @@ export const POST = createApiHandler(
     }
 
     const newBatch = await Batch.create(validated);
+
+    try {
+      const { revalidatePath } = await import("next/cache");
+      revalidatePath("/classes");
+      revalidatePath("/");
+    } catch {
+      // Ignore if revalidatePath fails in non-server action context
+    }
 
     return apiCreated(newBatch, "নতুন ব্যাচ সফলভাবে খোলা হয়েছে।");
   },

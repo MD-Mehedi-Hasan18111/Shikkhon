@@ -23,12 +23,28 @@ import {
 } from "@/components/ui/Card";
 import { ClassroomGallery } from "@/components/public/ClassroomGallery";
 import { getActiveBatchesWithDetails, getSiteSettings } from "@/lib/public-data";
-import { toBanglaNumber } from "@/lib/utils";
+import { toBanglaNumber, formatTo12h } from "@/lib/utils";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export const metadata = {
   title: "পাঠদান বিভাগ ও সক্রিয় ব্যাচসমূহ | শিক্ষণ একাডেমিক কেয়ার",
   description:
     "৬ষ্ঠ থেকে দ্বাদশ শ্রেণি ও আলিয়া মাদ্রাসা স্পেশাল কেয়ারের সময়সূচী, আসন সংখ্যা ও বিষয়ভিত্তিক ব্যাচ তালিকা।",
+};
+
+const classLevelLabels: Record<string, string> = {
+  class_6: "৬ষ্ঠ শ্রেণি",
+  class_7: "৭ম শ্রেণি",
+  class_8: "৮ম শ্রেণি",
+  class_9: "৯ম শ্রেণি",
+  class_10: "১০ম শ্রেণি",
+  hsc_1st: "একাদশ শ্রেণি (এইচএসসি)",
+  hsc_2nd: "দ্বাদশ শ্রেণি (এইচএসসি)",
+  alim_1st: "আলিম ১ম বর্ষ",
+  alim_2nd: "আলিম ২য় বর্ষ",
+  admission: "বিশ্ববিদ্যালয় ভর্তি",
 };
 
 export default async function ClassesPage() {
@@ -204,6 +220,9 @@ export default async function ClassesPage() {
                     subjects?: string[];
                     capacity: number;
                     monthlyFee?: number;
+                    enrolledCount?: number;
+                    availableSeats?: number;
+                    isFull?: boolean;
                     schedule?: Array<{
                       day: string;
                       startTime: string;
@@ -212,84 +231,174 @@ export default async function ClassesPage() {
                     }>;
                     assignedTeachers?: Array<{ fullName: string; designation?: string }>;
                     academicSession?: { name: string };
-                  }) => (
-                    <Card
-                      key={b._id}
-                      className="border border-slate-200 hover:border-[#00636b] transition flex flex-col justify-between bg-white"
-                    >
-                      <CardHeader className="space-y-3 pb-3">
-                        <div className="flex items-center justify-between">
-                          <Badge variant="primary" size="sm">
-                            {b.classLevel}
-                          </Badge>
-                          <span className="text-xs font-mono font-bold text-slate-500">
-                            {b.code}
-                          </span>
-                        </div>
-                        <CardTitle className="text-base text-slate-900">
-                          {b.name}
-                        </CardTitle>
-                        <div className="text-xs text-slate-600 space-y-1">
-                          <p>
-                            <span className="font-semibold text-slate-700">বিষয়: </span>
-                            {b.subjects?.join(", ") || "সকল বিষয়"}
-                          </p>
-                          {b.assignedTeachers && b.assignedTeachers.length > 0 && (
-                            <p>
-                              <span className="font-semibold text-slate-700">
-                                শিক্ষক:{" "}
-                              </span>
-                              {b.assignedTeachers.map((t) => t.fullName).join(", ")}
-                            </p>
-                          )}
-                        </div>
-                      </CardHeader>
+                  }) => {
+                    const isBatchFull =
+                      b.isFull ||
+                      (b.availableSeats !== undefined && b.availableSeats <= 0);
+                    const remainingSeats =
+                      b.availableSeats !== undefined
+                        ? b.availableSeats
+                        : Math.max(0, b.capacity - (b.enrolledCount || 0));
 
-                      <CardContent className="space-y-3 pt-0">
-                        {/* Schedule Snippet */}
-                        {b.schedule && b.schedule.length > 0 && (
-                          <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100 text-[11px] text-slate-600 space-y-1">
-                            <span className="font-bold text-slate-700 block">
-                              ক্লাস শিডিউল:
-                            </span>
-                            {b.schedule.slice(0, 2).map((s, idx) => (
-                              <div key={idx} className="flex justify-between">
-                                <span className="capitalize">{s.day}</span>
-                                <span className="font-mono">
-                                  {s.startTime} - {s.endTime}
-                                </span>
-                                {s.roomNo && (
-                                  <span className="text-slate-400">({s.roomNo})</span>
-                                )}
-                              </div>
-                            ))}
+                    return (
+                      <Card
+                        key={b._id}
+                        className="relative overflow-hidden border border-slate-200 hover:border-[#00636b] transition flex flex-col justify-between bg-white shadow-2xs hover:shadow-md pt-2"
+                      >
+                        {/* Corner Admission Tip Ribbon */}
+                        {isBatchFull ? (
+                          <div className="absolute top-0 right-0 z-10">
+                            <div className="bg-rose-600 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl shadow-2xs flex items-center gap-1">
+                              <span className="h-1.5 w-1.5 rounded-full bg-white inline-block" />
+                              <span>আসন পূর্ণ (Closed)</span>
+                            </div>
+                          </div>
+                        ) : remainingSeats <= 5 ? (
+                          <div className="absolute top-0 right-0 z-10">
+                            <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl shadow-2xs flex items-center gap-1 animate-pulse">
+                              <Sparkles className="h-3 w-3" />
+                              <span>ভর্তি চলছে • সীমিত আসন</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="absolute top-0 right-0 z-10">
+                            <div className="bg-gradient-to-r from-[#00636b] to-teal-600 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl shadow-2xs flex items-center gap-1">
+                              <Sparkles className="h-3 w-3" />
+                              <span>ভর্তি চলছে (Admission On)</span>
+                            </div>
                           </div>
                         )}
 
-                        {/* Fee and Capacity */}
-                        <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
-                          <span className="font-semibold text-slate-700">
-                            সর্বোচ্চ আসন: {toBanglaNumber(b.capacity)} জন
-                          </span>
-                          {b.monthlyFee !== undefined && b.monthlyFee > 0 && (
-                            <span className="font-bold text-[#00636b]">
-                              ফি: ৳{toBanglaNumber(b.monthlyFee)}
+                        <CardHeader className="space-y-3 pb-3">
+                          <div className="flex items-center justify-between pr-28">
+                            <Badge variant="primary" size="sm">
+                              {classLevelLabels[b.classLevel] || b.classLevel}
+                            </Badge>
+                            <span className="text-xs font-mono font-bold text-slate-500">
+                              {b.code}
                             </span>
-                          )}
-                        </div>
+                          </div>
+                          <CardTitle className="text-base text-slate-900 leading-snug">
+                            {b.name}
+                          </CardTitle>
+                          <div className="text-xs text-slate-600 space-y-1">
+                            <p>
+                              <span className="font-semibold text-slate-700">বিষয়: </span>
+                              {b.subjects?.join(", ") || "সকল বিষয়"}
+                            </p>
+                            {b.assignedTeachers && b.assignedTeachers.length > 0 && (
+                              <p>
+                                <span className="font-semibold text-slate-700">
+                                  শিক্ষক:{" "}
+                                </span>
+                                {b.assignedTeachers
+                                  .filter((t) => t && t.fullName)
+                                  .map((t) => t.fullName)
+                                  .join(", ")}
+                              </p>
+                            )}
+                          </div>
+                        </CardHeader>
 
-                        <Link href="/admissions" className="block w-full">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full text-xs hover:border-[#00636b] hover:text-[#00636b]"
-                          >
-                            ভর্তি তথ্য ও নিয়মাবলী
-                          </Button>
-                        </Link>
-                      </CardContent>
-                    </Card>
-                  )
+                        <CardContent className="space-y-3 pt-0">
+                          {/* Schedule Snippet */}
+                          {b.schedule && b.schedule.length > 0 && (
+                            <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100 text-[11px] text-slate-600 space-y-1.5">
+                              <span className="font-bold text-slate-700 block">
+                                ক্লাস শিডিউল:
+                              </span>
+                              {b.schedule.map((s, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex justify-between items-center py-0.5"
+                                >
+                                  <span className="capitalize font-medium text-slate-700">
+                                    {s.day}
+                                  </span>
+                                  <span className="font-mono text-slate-800 font-semibold">
+                                    {formatTo12h(s.startTime)} – {formatTo12h(s.endTime)}
+                                  </span>
+                                  {s.roomNo && (
+                                    <span className="text-slate-500 text-[10px]">
+                                      ({s.roomNo})
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Fee, Total Capacity & Seats Remaining */}
+                          <div className="space-y-2 pt-2 border-t border-slate-100 text-xs">
+                            <div className="flex items-center justify-between text-slate-700">
+                              <div className="flex items-center gap-1.5">
+                                <Users className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                                <span className="font-semibold">
+                                  সর্বোচ্চ আসন: {toBanglaNumber(b.capacity)} জন
+                                </span>
+                              </div>
+                              {b.monthlyFee !== undefined && b.monthlyFee > 0 && (
+                                <span className="font-bold text-[#00636b]">
+                                  ফি: ৳{toBanglaNumber(b.monthlyFee)}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Real-time Seat Availability Indicator */}
+                            <div
+                              className={`flex items-center justify-between text-xs py-1.5 px-2.5 rounded-lg border font-medium ${
+                                isBatchFull
+                                  ? "bg-rose-50 border-rose-200 text-rose-800"
+                                  : remainingSeats <= 5
+                                  ? "bg-amber-50 border-amber-200 text-amber-900"
+                                  : "bg-emerald-50 border-emerald-200 text-emerald-900"
+                              }`}
+                            >
+                              <span className="text-[11px] text-slate-500">
+                                আসন স্থিতি:
+                              </span>
+                              {isBatchFull ? (
+                                <span className="font-bold text-rose-600 text-[11px] flex items-center gap-1.5">
+                                  <span className="h-2 w-2 rounded-full bg-rose-500 inline-block animate-pulse" />
+                                  আসন পূর্ণ (ভর্তি বন্ধ)
+                                </span>
+                              ) : (
+                                <span className="font-bold text-emerald-700 text-[11px] flex items-center gap-1.5">
+                                  <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
+                                  অবশিষ্ট আসন:{" "}
+                                  <strong className="text-slate-900 font-extrabold text-xs">
+                                    {toBanglaNumber(remainingSeats)}
+                                  </strong>{" "}
+                                  টি
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {isBatchFull ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled
+                              className="w-full text-xs text-rose-600 border-rose-200 bg-rose-50/70 cursor-not-allowed font-semibold"
+                            >
+                              আসন পূর্ণ (ভর্তি বন্ধ)
+                            </Button>
+                          ) : (
+                            <Link href="/admissions" className="block w-full">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full text-xs hover:border-[#00636b] hover:text-[#00636b] font-semibold text-slate-700"
+                              >
+                                ভর্তি তথ্য ও নিয়মাবলী
+                              </Button>
+                            </Link>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  }
                 )}
               </div>
             )}
