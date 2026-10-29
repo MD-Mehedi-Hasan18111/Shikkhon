@@ -1,6 +1,10 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { IPayment } from "@/types/database";
 import { defaultSchemaOptions } from "@/lib/db-utils";
+import "./Student";
+import "./Batch";
+import "./AcademicSession";
+import "./User";
 
 export interface IPaymentDocument extends Omit<IPayment, "_id">, Document {}
 

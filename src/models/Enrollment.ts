@@ -1,6 +1,9 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { IEnrollment } from "@/types/database";
 import { defaultSchemaOptions } from "@/lib/db-utils";
+import "./Student";
+import "./Batch";
+import "./AcademicSession";
 
 export interface IEnrollmentDocument extends Omit<IEnrollment, "_id">, Document {}
 

@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { IExam } from "@/types/database";
 import { defaultSchemaOptions } from "@/lib/db-utils";
+import "./Batch";
 
 export interface IExamDocument extends Omit<IExam, "_id">, Document {}
 

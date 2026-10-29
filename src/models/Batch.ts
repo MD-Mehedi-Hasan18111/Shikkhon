@@ -1,6 +1,8 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { IBatch } from "@/types/database";
 import { defaultSchemaOptions } from "@/lib/db-utils";
+import "./AcademicSession";
+import "./Teacher";
 
 export interface IBatchDocument extends Omit<IBatch, "_id">, Document {}
 

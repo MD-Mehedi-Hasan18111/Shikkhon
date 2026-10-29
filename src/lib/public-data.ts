@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/mongodb";
+import "@/models";
 import { SiteSettings } from "@/models/SiteSettings";
 import { Teacher } from "@/models/Teacher";
 import { Notice } from "@/models/Notice";
@@ -312,21 +313,50 @@ const classLevelOrder: Record<string, number> = {
 export async function getActiveBatchesWithDetails() {
   try {
     await connectToDatabase();
-    const batches = await Batch.find({
-      status: { $in: ["active", "upcoming"] },
-    })
-      .populate("academicSession", "name isCurrent")
-      .populate("assignedTeachers", "fullName designation subjects")
-      .lean();
+
+    // Prevent bundler tree-shaking of referenced models
+    void AcademicSession;
+    void Teacher;
+    void Enrollment;
+    void Batch;
+
+    let batches: any[] = [];
+    const batchFilter: Record<string, any> = {
+      $or: [
+        { status: { $in: ["active", "upcoming"] } },
+        { status: { $exists: false } },
+        { status: null },
+      ],
+    };
+
+    try {
+      batches = await Batch.find(batchFilter)
+        .populate("academicSession", "name isCurrent")
+        .populate("assignedTeachers", "fullName qualifications subjects")
+        .lean();
+    } catch (popErr) {
+      console.warn("⚠️ [PublicData] Batch populate warning, falling back to unpopulated query:", popErr);
+      batches = await Batch.find(batchFilter).lean();
+    }
+
+    if (!batches || batches.length === 0) {
+      return [];
+    }
 
     const batchIds = batches.map((b) => b._id);
-    const enrollmentCounts = await Enrollment.aggregate([
-      { $match: { batch: { $in: batchIds }, status: "active" } },
-      { $group: { _id: "$batch", count: { $sum: 1 } } },
-    ]);
-    const countsMap = new Map<string, number>(
-      enrollmentCounts.map((e) => [String(e._id), e.count])
-    );
+    let countsMap = new Map<string, number>();
+
+    try {
+      const enrollmentCounts = await Enrollment.aggregate([
+        { $match: { batch: { $in: batchIds }, status: "active" } },
+        { $group: { _id: "$batch", count: { $sum: 1 } } },
+      ]);
+      countsMap = new Map<string, number>(
+        enrollmentCounts.map((e) => [String(e._id), e.count])
+      );
+    } catch (aggErr) {
+      console.warn("⚠️ [PublicData] Enrollment aggregate warning:", aggErr);
+    }
 
     const result = batches.map((b) => {
       const enrolledCount = countsMap.get(String(b._id)) || 0;

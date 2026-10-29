@@ -1,6 +1,8 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { IResult } from "@/types/database";
 import { defaultSchemaOptions } from "@/lib/db-utils";
+import "./Exam";
+import "./Student";
 
 export interface IResultDocument extends Omit<IResult, "_id">, Document {}
 

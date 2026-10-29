@@ -1,6 +1,9 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { IAttendance } from "@/types/database";
 import { normalizeDateToStartOfDay, defaultSchemaOptions } from "@/lib/db-utils";
+import "./Student";
+import "./Batch";
+import "./User";
 
 export interface IAttendanceDocument extends Omit<IAttendance, "_id">, Document {}
 
