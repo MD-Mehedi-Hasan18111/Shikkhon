@@ -285,6 +285,47 @@ export interface IEvent {
 // ==========================================
 // 13. SiteSettings Types
 // ==========================================
+export interface IHomeStat {
+  label: string;
+  value: string;
+}
+
+export interface IHomeClassItem {
+  title: string;
+  description: string;
+  badge: string;
+  timing: string;
+  href: string;
+}
+
+export interface IHomeFeature {
+  title: string;
+  description: string;
+}
+
+export interface IClassroomGalleryItem {
+  id?: number | string;
+  title: string;
+  badge: string;
+  description: string;
+  features: string[];
+  imageSrc: string;
+}
+
+export interface IClassProgram {
+  id: string;
+  title: string;
+  badge: string;
+  description: string;
+  features: string[];
+}
+
+export interface IAdmissionStep {
+  num: string;
+  title: string;
+  desc: string;
+}
+
 export interface ISiteSettings {
   _id: Types.ObjectId | string;
   key: string; // Singleton "main"
@@ -314,6 +355,42 @@ export interface ISiteSettings {
   aboutTitle?: string;
   aboutText?: string;
   metaDescription?: string;
+
+  // Home Page CMS
+  homeStats?: IHomeStat[];
+  homeClasses?: IHomeClassItem[];
+  homeFeatures?: IHomeFeature[];
+  classroomGallery?: IClassroomGalleryItem[];
+  homeCtaTitle?: string;
+  homeCtaText?: string;
+
+  // About Page CMS
+  aboutStoryParagraph2?: string;
+  aboutMission?: string;
+  aboutVision?: string;
+  aboutValues?: string;
+  aboutHighlights?: string[];
+  officeHours?: string;
+
+  // Classes / Batches Page CMS
+  classesPageTitle?: string;
+  classesPageSubtitle?: string;
+  classPrograms?: IClassProgram[];
+
+  // Admission Instructions Page CMS
+  admissionsPageTitle?: string;
+  admissionsPageSubtitle?: string;
+  admissionsNoticeTitle?: string;
+  admissionsNoticeText?: string;
+  admissionSteps?: IAdmissionStep[];
+  admissionRequirements?: string[];
+
+  // Contact Page CMS
+  contactPageTitle?: string;
+  contactPageSubtitle?: string;
+  contactOfficeHours?: string;
+  contactMapEmbedUrl?: string;
+
   createdAt: Date;
   updatedAt: Date;
 }

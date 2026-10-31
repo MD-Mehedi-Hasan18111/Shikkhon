@@ -40,8 +40,10 @@ import {
   getActiveBatchesWithDetails,
 } from "@/lib/public-data";
 import { generateWhatsAppLink, DEFAULT_WHATSAPP_GENERAL_MESSAGE } from "@/lib/whatsapp";
+import { IHomeStat, IHomeClassItem, IHomeFeature } from "@/types/database";
 
-export const revalidate = 60; // ISR Revalidate every 60 seconds
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function HomePage() {
   const [settings, events, batches] = await Promise.all([
@@ -50,92 +52,111 @@ export default async function HomePage() {
     getActiveBatchesWithDetails(),
   ]);
 
-  const classesList = [
-    {
-      title: "৬ষ্ঠ থেকে ৮ম শ্রেণি",
-      description:
-        "বেসিক ফাউন্ডেশন, গণিত ও বিজ্ঞানের নিবিড় যত্ন, ধর্মীয় শিক্ষা ও মাদ্রাসা সিলেবাস সমন্বয়।",
-      badge: "জেনারেল ও মাদ্রাসা",
-      timing: "সকাল ও বিকাল ব্যাচ",
-      href: "/classes#class-6-8",
-    },
-    {
-      title: "৯ম ও ১০ম শ্রেণি (এসএসসি)",
-      description:
-        "বিজ্ঞান, মানবিক ও ব্যবসায় শিক্ষা শাখার শতভাগ প্রস্তুতি, অধ্যায়ভিত্তিক পরীক্ষা ও সৃজনশীল প্র্যাকটিস।",
-      badge: "এসএসসি স্পেশাল",
-      timing: "প্রতিদিন নিয়মিত ক্লাস",
-      href: "/classes#class-9-10",
-    },
-    {
-      title: "একাদশ ও দ্বাদশ শ্রেণি (এইচএসসি)",
-      description:
-        "পদার্থবিজ্ঞান, রসায়ন, উচ্চতর গণিত, জীববিজ্ঞান, আইসিটি ও সাধারণ বিষয়ের বিষয়ভিত্তিক পূর্ণাঙ্গ কেয়ার।",
-      badge: "এইচএসসি ব্যাচ",
-      timing: "কলেজ সময়ের সাথে সমন্বয়",
-      href: "/classes#hsc",
-    },
-    {
-      title: "আলিয়া মাদ্রাসা স্পেশাল কেয়ার",
-      description:
-        "দাখিল ও আলিম পরীক্ষার্থীদের জন্য বিশেষ পাঠদান, আরবি সাহিত্য, হাদিস ও সাধারণ বিষয়ের সমন্বিত গাইডেন্স।",
-      badge: "আলিয়া মাদ্রাসা",
-      timing: "বিশেষায়িত শিক্ষক",
-      href: "/classes#madrasah",
-    },
+  const classesList: IHomeClassItem[] = settings.homeClasses?.length
+    ? settings.homeClasses
+    : [
+        {
+          title: "৬ষ্ঠ থেকে ৮ম শ্রেণি",
+          description:
+            "বেসিক ফাউন্ডেশন, গণিত ও বিজ্ঞানের নিবিড় যত্ন, ধর্মীয় শিক্ষা ও মাদ্রাসা সিলেবাস সমন্বয়।",
+          badge: "জেনারেল ও মাদ্রাসা",
+          timing: "সকাল ও বিকাল ব্যাচ",
+          href: "/classes#class-6-8",
+        },
+        {
+          title: "৯ম ও ১০ম শ্রেণি (এসএসসি)",
+          description:
+            "বিজ্ঞান, মানবিক ও ব্যবসায় শিক্ষা শাখার শতভাগ প্রস্তুতি, অধ্যায়ভিত্তিক পরীক্ষা ও সৃজনশীল প্র্যাকটিস।",
+          badge: "এসএসসি স্পেশাল",
+          timing: "প্রতিদিন নিয়মিত ক্লাস",
+          href: "/classes#class-9-10",
+        },
+        {
+          title: "একাদশ ও দ্বাদশ শ্রেণি (এইচএসসি)",
+          description:
+            "পদার্থবিজ্ঞান, রসায়ন, উচ্চতর গণিত, জীববিজ্ঞান, আইসিটি ও সাধারণ বিষয়ের বিষয়ভিত্তিক পূর্ণাঙ্গ কেয়ার।",
+          badge: "এইচএসসি ব্যাচ",
+          timing: "কলেজ সময়ের সাথে সমন্বয়",
+          href: "/classes#hsc",
+        },
+        {
+          title: "আলিয়া মাদ্রাসা স্পেশাল কেয়ার",
+          description:
+            "দাখিল ও আলিম পরীক্ষার্থীদের জন্য বিশেষ পাঠদান, আরবি সাহিত্য, হাদিস ও সাধারণ বিষয়ের সমন্বিত গাইডেন্স।",
+          badge: "আলিয়া মাদ্রাসা",
+          timing: "বিশেষায়িত শিক্ষক",
+          href: "/classes#madrasah",
+        },
+      ];
+
+  const featureIcons = [
+    <Users key={0} className="h-5 w-5 text-[#00636b]" />,
+    <CalendarCheck key={1} className="h-5 w-5 text-[#c27a29]" />,
+    <Award key={2} className="h-5 w-5 text-emerald-700" />,
+    <Wallet key={3} className="h-5 w-5 text-[#00636b]" />,
+    <ShieldCheck key={4} className="h-5 w-5 text-[#c27a29]" />,
+    <BookOpen key={5} className="h-5 w-5 text-emerald-700" />,
   ];
 
-  const features = [
-    {
-      icon: <Users className="h-5 w-5 text-[#00636b]" />,
-      title: "অভিজ্ঞ শিক্ষকমণ্ডলী",
-      description:
-        "চট্টগ্রামের স্বনামধন্য কলেজ ও বিশ্ববিদ্যালয়ের অভিজ্ঞ শিক্ষকদের প্রত্যক্ষ তত্ত্বাবধানে মানসম্মত ক্লাস।",
-    },
-    {
-      icon: <CalendarCheck className="h-5 w-5 text-[#c27a29]" />,
-      title: "ডিজিটাল হাজিরা ও সময়ানুবর্তিতা",
-      description:
-        "প্রতিটি ক্লাসে উপস্থিতি নিশ্চিতকরণ এবং অনুপস্থিত শিক্ষার্থীদের অভিভাবকদের কাছে স্বয়ংক্রিয় তথ্য প্রদান।",
-    },
-    {
-      icon: <Award className="h-5 w-5 text-emerald-700" />,
-      title: "সাপ্তাহিক ও মাসিক মডেল টেস্ট",
-      description:
-        "নিয়মিত মূল্যায়ন পরীক্ষা, ওএমআর শিট মূল্যায়ন এবং মেধা তালিকা প্রকাশের মাধ্যমে শিক্ষার্থীর উন্নতি যাচাই।",
-    },
-    {
-      icon: <Wallet className="h-5 w-5 text-[#00636b]" />,
-      title: "স্বচ্ছ ফি ও ডিজিটাল রসিদ",
-      description:
-        "মাসিক টিউশন ফি ও পরীক্ষা ফির হিসাব সংরক্ষণ, মোবাইল ব্যাংকিং এবং ডিজিটাল মানি রিসিট প্রদান।",
-    },
-    {
-      icon: <ShieldCheck className="h-5 w-5 text-[#c27a29]" />,
-      title: "অভিভাবকদের সার্বক্ষণিক মনিটরিং",
-      description:
-        "অভিভাবক মিটিং ও নিয়মিত ফিডব্যাকের মাধ্যমে শিক্ষার্থীর দুর্বলতা চিহ্নিত করে বিশেষ ক্লাসের ব্যবস্থা।",
-    },
-    {
-      icon: <BookOpen className="h-5 w-5 text-emerald-700" />,
-      title: "প্রিন্টেড লেকচার শিট ও হ্যান্ডনোট",
-      description:
-        "সহজ ও তথ্যবহুল নিজস্ব লেকচার শিট, হ্যান্ডনোট এবং বোর্ড পরীক্ষার স্ট্যান্ডার্ড প্রশ্নব্যাংক সমাধান।",
-    },
-  ];
+  const features: { icon: any; title: string; description: string }[] = settings.homeFeatures?.length
+    ? settings.homeFeatures.map((f: any, idx: number) => ({
+        icon: featureIcons[idx % featureIcons.length],
+        title: f.title,
+        description: f.description,
+      }))
+    : [
+        {
+          icon: <Users className="h-5 w-5 text-[#00636b]" />,
+          title: "অভিজ্ঞ শিক্ষকমণ্ডলী",
+          description:
+            "চট্টগ্রামের স্বনামধন্য কলেজ ও বিশ্ববিদ্যালয়ের অভিজ্ঞ শিক্ষকদের প্রত্যক্ষ তত্ত্বাবধানে মানসম্মত ক্লাস।",
+        },
+        {
+          icon: <CalendarCheck className="h-5 w-5 text-[#c27a29]" />,
+          title: "ডিজিটাল হাজিরা ও সময়ানুবর্তিতা",
+          description:
+            "প্রতিটি ক্লাসে উপস্থিতি নিশ্চিতকরণ এবং অনুপস্থিত শিক্ষার্থীদের অভিভাবকদের কাছে স্বয়ংক্রিয় তথ্য প্রদান।",
+        },
+        {
+          icon: <Award className="h-5 w-5 text-emerald-700" />,
+          title: "সাপ্তাহিক ও মাসিক মডেল টেস্ট",
+          description:
+            "নিয়মিত মূল্যায়ন পরীক্ষা, ওএমআর শিট মূল্যায়ন এবং মেধা তালিকা প্রকাশের মাধ্যমে শিক্ষার্থীর উন্নতি যাচাই।",
+        },
+        {
+          icon: <Wallet className="h-5 w-5 text-[#00636b]" />,
+          title: "স্বচ্ছ ফি ও ডিজিটাল রসিদ",
+          description:
+            "মাসিক টিউশন ফি ও পরীক্ষা ফির হিসাব সংরক্ষণ, মোবাইল ব্যাংকিং এবং ডিজিটাল মানি রিসিট প্রদান।",
+        },
+        {
+          icon: <ShieldCheck className="h-5 w-5 text-[#c27a29]" />,
+          title: "অভিভাবকদের সার্বক্ষণিক মনিটরিং",
+          description:
+            "অভিভাবক মিটিং ও নিয়মিত ফিডব্যাকের মাধ্যমে শিক্ষার্থীর দুর্বলতা চিহ্নিত করে বিশেষ ক্লাসের ব্যবস্থা।",
+        },
+        {
+          icon: <BookOpen className="h-5 w-5 text-emerald-700" />,
+          title: "প্রিন্টেড লেকচার শিট ও হ্যান্ডনোট",
+          description:
+            "সহজ ও তথ্যবহুল নিজস্ব লেকচার শিট, হ্যান্ডনোট এবং বোর্ড পরীক্ষার স্ট্যান্ডার্ড প্রশ্নব্যাংক সমাধান।",
+        },
+      ];
 
-  const stats = [
-    { label: "সফল শিক্ষার্থী", value: `${toBanglaNumber(3500)}+` },
-    {
-      label: "অভিজ্ঞ শিক্ষক",
-      value: `${toBanglaNumber(25)}+`,
-    },
-    {
-      label: "সক্রিয় ব্যাচ",
-      value: `${toBanglaNumber(batches.length > 0 ? batches.length : 16)}+`,
-    },
-    { label: "বোর্ড জিপিএ-৫ হার", value: "৯৮%" },
-  ];
+  const stats: IHomeStat[] = settings.homeStats?.length
+    ? settings.homeStats
+    : [
+        { label: "সফল শিক্ষার্থী", value: `${toBanglaNumber(3500)}+` },
+        {
+          label: "অভিজ্ঞ শিক্ষক",
+          value: `${toBanglaNumber(25)}+`,
+        },
+        {
+          label: "সক্রিয় ব্যাচ",
+          value: `${toBanglaNumber(batches.length > 0 ? batches.length : 16)}+`,
+        },
+        { label: "বোর্ড জিপিএ-৫ হার", value: "৯৮%" },
+      ];
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
@@ -349,9 +370,7 @@ export default async function HomePage() {
         </section>
 
         {/* Modern Classrooms & Facilities Section */}
-        <ClassroomGallery />
-
-
+        <ClassroomGallery items={settings.classroomGallery} />
 
         {/* Why Choose Us Features Section */}
         <section className="py-16 bg-slate-50 border-b border-slate-200">
@@ -361,7 +380,7 @@ export default async function HomePage() {
                 আমাদের বিশেষত্ব
               </Badge>
               <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                শিক্ষণ একাডেমি কেন ব্যতিক্রম?
+                {settings.institutionName || "শিক্ষণ একাডেমি"} কেন ব্যতিক্রম?
               </h2>
               <p className="text-xs sm:text-sm text-slate-500">
                 প্রতিটি শিক্ষার্থীর মেধা বিকাশ ও নিয়মিত ফলাফলের জন্য প্রয়োজনীয় সকল
@@ -494,11 +513,11 @@ export default async function HomePage() {
               ভর্তি তথ্য ও সহায়তা
             </Badge>
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              ২০২৬ শিক্ষাবর্ষে আসন সংখ্যা সীমিত, আজই ভর্তি নিশ্চিত করুন
+              {settings.homeCtaTitle || "২০২৬ শিক্ষাবর্ষে আসন সংখ্যা সীমিত, আজই ভর্তি নিশ্চিত করুন"}
             </h2>
             <p className="text-xs sm:text-sm text-slate-200 max-w-2xl mx-auto leading-relaxed">
-              শিক্ষার্থীকে সরাসরি কোচিং অফিসে এসে প্রয়োজনীয় কাগজপত্রসহ ভর্তি সম্পন্ন করতে
-              হবে। যে কোনো তথ্যের জন্য আমাদের হেল্পলাইনে সরাসরি কল করুন।
+              {settings.homeCtaText ||
+                "শিক্ষার্থীকে সরাসরি কোচিং অফিসে এসে প্রয়োজনীয় কাগজপত্রসহ ভর্তি সম্পন্ন করতে হবে। যে কোনো তথ্যের জন্য আমাদের হেল্পলাইনে সরাসরি কল করুন।"}
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-4 pt-2">

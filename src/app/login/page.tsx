@@ -55,6 +55,40 @@ export default function LoginPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
+  const [siteSettings, setSiteSettings] = useState<{
+    institutionName: string;
+    subTitle: string;
+    motto: string;
+    logoUrl: string;
+    phone: string;
+    address: string;
+  }>({
+    institutionName: bn.institution.name,
+    subTitle: bn.institution.subTitle,
+    motto: bn.institution.motto,
+    logoUrl: "/images/logo.png",
+    phone: bn.institution.phones[0],
+    address: bn.institution.address,
+  });
+
+  useEffect(() => {
+    fetch("/api/site-settings")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json?.data) {
+          setSiteSettings({
+            institutionName: json.data.institutionName || bn.institution.name,
+            subTitle: json.data.heroSubtitle || bn.institution.subTitle,
+            motto: json.data.motto || bn.institution.motto,
+            logoUrl: json.data.logoUrl || "/images/logo.png",
+            phone: json.data.phones?.[0] || bn.institution.phones[0],
+            address: json.data.address || bn.institution.address,
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // If already logged in, redirect directly to user's dashboard
   useEffect(() => {
     fetch("/api/auth/me")
@@ -173,27 +207,27 @@ export default function LoginPage() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md my-6">
         {/* Brand Header */}
         <div className="text-center space-y-3 mb-6">
-          <div className="inline-flex items-center justify-center p-2 rounded-2xl bg-white border border-slate-200 shadow-2xs">
-            <Image
-              src="/images/logo.png"
-              alt={bn.institution.name}
-              width={64}
-              height={64}
-              className="object-contain"
-              priority
+          <div className="inline-flex items-center justify-center p-2 rounded-2xl bg-white border border-slate-200 shadow-2xs h-16 w-16 mx-auto overflow-hidden">
+            <img
+              src={siteSettings.logoUrl}
+              alt={siteSettings.institutionName}
+              className="max-h-full max-w-full object-contain"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = "/images/logo.png";
+              }}
             />
           </div>
 
           <div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-[#00636b] tracking-tight">
-              {bn.institution.name}
+              {siteSettings.institutionName}
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">{bn.institution.subTitle}</p>
+            <p className="text-xs text-slate-500 mt-0.5">{siteSettings.subTitle}</p>
           </div>
 
           <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#aa651d] bg-[#fef9ee] px-2.5 py-0.5 rounded-full border border-[#fde68a]">
             <Sparkles className="h-3 w-3 text-[#c27a29]" />
-            <span>{bn.institution.motto}</span>
+            <span>{siteSettings.motto}</span>
           </div>
         </div>
 
@@ -292,10 +326,10 @@ export default function LoginPage() {
             <div className="flex items-center gap-1 text-[11px]">
               <span>সহায়তার জন্য:</span>
               <a
-                href={`tel:${bn.institution.phonesRaw[0]}`}
+                href={`tel:${siteSettings.phone.replace(/[^0-9]/g, "")}`}
                 className="font-bold text-[#00636b] hover:underline"
               >
-                {bn.institution.phones[0]}
+                {siteSettings.phone}
               </a>
             </div>
           </CardFooter>
@@ -306,10 +340,10 @@ export default function LoginPage() {
       <div className="max-w-md mx-auto text-center space-y-2 text-xs text-slate-500 pb-2">
         <div className="flex items-center justify-center gap-1.5 text-slate-400">
           <MapPin className="h-3.5 w-3.5 text-[#00636b]" />
-          <span>{bn.institution.address}</span>
+          <span>{siteSettings.address}</span>
         </div>
         <p className="text-[11px] text-slate-400">
-          সর্বস্বত্ব সংরক্ষিত © ২০২৬ {bn.institution.name}
+          সর্বস্বত্ব সংরক্ষিত © ২০২৬ {siteSettings.institutionName}
         </p>
       </div>
     </div>

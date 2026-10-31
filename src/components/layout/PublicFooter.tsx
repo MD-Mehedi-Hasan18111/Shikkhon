@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { PhoneCall, MapPin, Mail, ChevronRight, ShieldCheck, Heart, MessageCircle } from "lucide-react";
@@ -11,13 +14,40 @@ interface PublicFooterProps {
 }
 
 export function PublicFooter({ settings }: PublicFooterProps = {}) {
-  const institutionName = settings?.institutionName || bn.institution.name;
-  const institutionMotto = settings?.motto || bn.institution.motto;
-  const institutionAddress = settings?.address || bn.institution.address;
-  const contactPhone = settings?.contactPhone || settings?.phones?.[0] || bn.institution.phones[0];
-  const contactEmail = settings?.contactEmail || settings?.email || bn.institution.email;
-  const institutionTagline = settings?.tagline || bn.institution.subTitle;
-  const socialLinks = settings?.socialLinks || {};
+  const [liveSettings, setLiveSettings] = useState(settings);
+
+  useEffect(() => {
+    if (settings) {
+      setLiveSettings(settings);
+    }
+  }, [settings]);
+
+  useEffect(() => {
+    const fetchLatest = () => {
+      fetch("/api/site-settings", { cache: "no-store" })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((json) => {
+          if (json?.data) {
+            setLiveSettings(json.data);
+          }
+        })
+        .catch(() => {});
+    };
+    window.addEventListener("site-settings-updated", fetchLatest);
+    return () => {
+      window.removeEventListener("site-settings-updated", fetchLatest);
+    };
+  }, []);
+
+  const activeSettings = liveSettings || settings;
+  const institutionName = activeSettings?.institutionName || bn.institution.name;
+  const institutionLogoUrl = activeSettings?.logoUrl || "/images/logo.png";
+  const institutionMotto = activeSettings?.motto || bn.institution.motto;
+  const institutionAddress = activeSettings?.address || bn.institution.address;
+  const contactPhone = activeSettings?.phones?.[0] || activeSettings?.contactPhone || bn.institution.phones[0];
+  const contactEmail = activeSettings?.email || activeSettings?.contactEmail || bn.institution.email;
+  const institutionTagline = activeSettings?.heroSubtitle || activeSettings?.tagline || bn.institution.subTitle;
+  const socialLinks = activeSettings?.socialLinks || {};
 
   return (
     <>
@@ -30,13 +60,14 @@ export function PublicFooter({ settings }: PublicFooterProps = {}) {
             {/* Column 1: Institute Info */}
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-white p-1 flex items-center justify-center shrink-0">
-                  <Image
-                    src="/images/logo.png"
+                <div className="h-10 w-10 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 overflow-hidden">
+                  <img
+                    src={institutionLogoUrl}
                     alt={institutionName}
-                    width={36}
-                    height={36}
-                    className="object-contain"
+                    className="max-h-full max-w-full object-contain"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = "/images/logo.png";
+                    }}
                   />
                 </div>
                 <div>

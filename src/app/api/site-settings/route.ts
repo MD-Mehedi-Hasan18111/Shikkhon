@@ -34,6 +34,94 @@ const updateSiteSettingsSchema = z.object({
   aboutTitle: z.string().optional(),
   aboutText: z.string().optional(),
   metaDescription: z.string().optional(),
+
+  // Home Page CMS
+  homeStats: z
+    .array(
+      z.object({
+        label: z.string(),
+        value: z.string(),
+      })
+    )
+    .optional(),
+  homeClasses: z
+    .array(
+      z.object({
+        title: z.string(),
+        description: z.string(),
+        badge: z.string(),
+        timing: z.string(),
+        href: z.string(),
+      })
+    )
+    .optional(),
+  homeFeatures: z
+    .array(
+      z.object({
+        title: z.string(),
+        description: z.string(),
+      })
+    )
+    .optional(),
+  classroomGallery: z
+    .array(
+      z.object({
+        id: z.union([z.string(), z.number()]).optional(),
+        title: z.string(),
+        badge: z.string().optional().default(""),
+        description: z.string().optional().default(""),
+        features: z.array(z.string()).optional().default([]),
+        imageSrc: z.string(),
+      })
+    )
+    .optional(),
+  homeCtaTitle: z.string().optional(),
+  homeCtaText: z.string().optional(),
+
+  // About Page CMS
+  aboutStoryParagraph2: z.string().optional(),
+  aboutMission: z.string().optional(),
+  aboutVision: z.string().optional(),
+  aboutValues: z.string().optional(),
+  aboutHighlights: z.array(z.string()).optional(),
+  officeHours: z.string().optional(),
+
+  // Classes Page CMS
+  classesPageTitle: z.string().optional(),
+  classesPageSubtitle: z.string().optional(),
+  classPrograms: z
+    .array(
+      z.object({
+        id: z.string(),
+        title: z.string(),
+        badge: z.string(),
+        description: z.string(),
+        features: z.array(z.string()),
+      })
+    )
+    .optional(),
+
+  // Admission Instructions Page CMS
+  admissionsPageTitle: z.string().optional(),
+  admissionsPageSubtitle: z.string().optional(),
+  admissionsNoticeTitle: z.string().optional(),
+  admissionsNoticeText: z.string().optional(),
+  admissionSteps: z
+    .array(
+      z.object({
+        num: z.string(),
+        title: z.string(),
+        desc: z.string(),
+      })
+    )
+    .optional(),
+  admissionRequirements: z.array(z.string()).optional(),
+
+  // Contact Page CMS
+  contactPageTitle: z.string().optional(),
+  contactPageSubtitle: z.string().optional(),
+  contactOfficeHours: z.string().optional(),
+  contactMapEmbedUrl: z.string().optional(),
 });
 
 export const GET = createApiHandler(

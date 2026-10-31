@@ -18,7 +18,8 @@ import { getSiteSettings } from "@/lib/public-data";
 import { toBanglaNumber } from "@/lib/utils";
 import { generateWhatsAppLink, isValidWhatsAppNumber } from "@/lib/whatsapp";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export const metadata = {
   title: "যোগাযোগ ও ক্যাম্পাস ঠিকানা | শিক্ষণ একাডেমিক কেয়ার",
@@ -38,6 +39,9 @@ export default async function ContactPage() {
       "আসসালামু আলাইকুম, আমি কোচিং সংক্রান্ত তথ্য জানতে যোগাযোগ করছি।",
   });
   const hasValidWhatsApp = isValidWhatsAppNumber(whatsAppPhone);
+
+  const mainPhone = settings.phones?.[0] || settings.contactPhone;
+  const mainEmail = settings.email || settings.contactEmail;
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-800 antialiased">
@@ -63,11 +67,11 @@ export default async function ContactPage() {
                 হেল্পডেস্ক ও ক্যাম্পাস
               </Badge>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-4 text-white">
-                আমাদের সাথে যোগাযোগের উপায়
+                {settings.contactPageTitle || "আমাদের সাথে যোগাযোগের উপায়"}
               </h1>
               <p className="text-base sm:text-lg text-teal-100 leading-relaxed">
-                ভর্তি, ব্যাচ তথ্য বা অ্যাকাডেমিক যেকোনো পরামর্শের জন্য সরাসরি আমাদের
-                ক্যাম্পাসে চলে আসুন অথবা ফোনে যোগাযোগ করুন।
+                {settings.contactPageSubtitle ||
+                  "ভর্তি, ব্যাচ তথ্য বা অ্যাকাডেমিক যেকোনো পরামর্শের জন্য সরাসরি আমাদের ক্যাম্পাসে চলে আসুন অথবা ফোনে যোগাযোগ করুন।"}
               </p>
             </div>
           </div>
@@ -98,18 +102,18 @@ export default async function ContactPage() {
                   <Phone className="h-6 w-6" />
                 </div>
                 <h3 className="font-bold text-slate-900 text-base mb-1">হটলাইন ও ফোন</h3>
-                {settings.contactPhone ? (
+                {mainPhone ? (
                   <a
-                    href={`tel:${settings.contactPhone}`}
+                    href={`tel:${mainPhone.replace(/[^0-9]/g, "")}`}
                     className="text-sm font-semibold font-mono text-primary-700 hover:underline block"
                   >
-                    {settings.contactPhone}
+                    {mainPhone}
                   </a>
                 ) : (
                   <p className="text-xs text-slate-500">নম্বর শীঘ্রই যুক্ত হবে</p>
                 )}
                 <span className="text-[11px] text-slate-400 block mt-1">
-                  সকাল ৯টা থেকে রাত ৮টা
+                  {settings.contactOfficeHours || settings.officeHours || "সকাল ৯টা থেকে রাত ৮টা"}
                 </span>
               </CardContent>
             </Card>
@@ -121,12 +125,12 @@ export default async function ContactPage() {
                   <Mail className="h-6 w-6" />
                 </div>
                 <h3 className="font-bold text-slate-900 text-base mb-1">ইমেইল ঠিকানা</h3>
-                {settings.contactEmail ? (
+                {mainEmail ? (
                   <a
-                    href={`mailto:${settings.contactEmail}`}
+                    href={`mailto:${mainEmail}`}
                     className="text-xs font-medium text-primary-700 hover:underline block break-all"
                   >
-                    {settings.contactEmail}
+                    {mainEmail}
                   </a>
                 ) : (
                   <p className="text-xs text-slate-500">info@shikkhon.edu.bd</p>
@@ -314,28 +318,42 @@ export default async function ContactPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0">
-                    <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-100 h-64 flex flex-col items-center justify-center text-center p-6 space-y-3">
-                      <MapPin className="h-10 w-10 text-primary-600 animate-bounce" />
-                      <div>
-                        <h4 className="font-bold text-slate-900 text-sm">
-                          {settings.institutionName || "শিক্ষণ একাডেমি ক্যাম্পাস"}
-                        </h4>
-                        <p className="text-xs text-slate-600 max-w-xs mt-1">
-                          {settings.address || "ঢাকা, বাংলাদেশ"}
-                        </p>
+                    {settings.contactMapEmbedUrl ? (
+                      <div className="rounded-xl overflow-hidden border border-slate-200 h-64 w-full">
+                        <iframe
+                          src={settings.contactMapEmbedUrl}
+                          width="100%"
+                          height="100%"
+                          style={{ border: 0 }}
+                          allowFullScreen
+                          loading="lazy"
+                          referrerPolicy="no-referrer-when-downgrade"
+                        />
                       </div>
-                      <a
-                        href={`https://maps.google.com/?q=${encodeURIComponent(
-                          settings.address || "Dhaka, Bangladesh"
-                        )}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-700 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-xs hover:bg-slate-50 transition"
-                      >
-                        <span>গুগল ম্যাপে দেখুন</span>
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
-                    </div>
+                    ) : (
+                      <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-100 h-64 flex flex-col items-center justify-center text-center p-6 space-y-3">
+                        <MapPin className="h-10 w-10 text-primary-600 animate-bounce" />
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-sm">
+                            {settings.institutionName || "শিক্ষণ একাডেমি ক্যাম্পাস"}
+                          </h4>
+                          <p className="text-xs text-slate-600 max-w-xs mt-1">
+                            {settings.address || "ঢাকা, বাংলাদেশ"}
+                          </p>
+                        </div>
+                        <a
+                          href={`https://maps.google.com/?q=${encodeURIComponent(
+                            settings.address || "Dhaka, Bangladesh"
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-700 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-xs hover:bg-slate-50 transition"
+                        >
+                          <span>গুগল ম্যাপে দেখুন</span>
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>

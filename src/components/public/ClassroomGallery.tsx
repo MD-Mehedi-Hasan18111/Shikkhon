@@ -78,8 +78,9 @@ export function ClassroomGallery({
   subtitle = "শিক্ষার্থীদের পড়াশোনায় গভীর মনোযোগ, আরামদায়ক বসার ব্যবস্থা ও স্বাস্থ্যকর ভেন্টিলেশন নিশ্চিত করতে আমাদের সুসজ্জিত শ্রেণিকক্ষসমূহ",
   badgeText = "ক্যাম্পাস ও ক্লাসরুম পরিদর্শন",
   className = "",
-  items = defaultClassrooms,
+  items,
 }: ClassroomGalleryProps) {
+  const displayItems = items && items.length > 0 ? items : defaultClassrooms;
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null);
 
   const openLightbox = (index: number) => {
@@ -92,15 +93,15 @@ export function ClassroomGallery({
 
   const showNext = () => {
     if (activeImageIndex === null) return;
-    setActiveImageIndex((activeImageIndex + 1) % items.length);
+    setActiveImageIndex((activeImageIndex + 1) % displayItems.length);
   };
 
   const showPrev = () => {
     if (activeImageIndex === null) return;
-    setActiveImageIndex((activeImageIndex - 1 + items.length) % items.length);
+    setActiveImageIndex((activeImageIndex - 1 + displayItems.length) % displayItems.length);
   };
 
-  const activeItem = activeImageIndex !== null ? items[activeImageIndex] : null;
+  const activeItem = activeImageIndex !== null ? displayItems[activeImageIndex] : null;
 
   return (
     <section className={`py-16 bg-white border-b border-slate-200 ${className}`}>
@@ -164,7 +165,7 @@ export function ClassroomGallery({
 
         {/* 4 Classrooms Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {items.map((room, idx) => (
+          {displayItems.map((room, idx) => (
             <Card
               key={room.id}
               className="group overflow-hidden border border-slate-200 hover:border-[#00636b] hover:shadow-lg transition-all duration-300 flex flex-col justify-between bg-white rounded-2xl"
@@ -312,7 +313,7 @@ export function ClassroomGallery({
 
               {/* Photo Counter */}
               <div className="text-xs font-semibold text-slate-400 shrink-0">
-                ছবি {activeImageIndex + 1} / {items.length}
+                ছবি {activeImageIndex + 1} / {displayItems.length}
               </div>
             </div>
           </div>

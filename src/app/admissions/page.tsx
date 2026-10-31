@@ -26,7 +26,8 @@ import {
   DEFAULT_WHATSAPP_ADMISSION_MESSAGE,
 } from "@/lib/whatsapp";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export const metadata = {
   title: "সরাসরি ভর্তি নির্দেশিকা ও তথ্য | শিক্ষণ একাডেমিক কেয়ার",
@@ -45,32 +46,41 @@ export default async function AdmissionsPage() {
   });
   const hasValidWhatsApp = isValidWhatsAppNumber(whatsAppPhone);
 
-  const steps = [
-    {
-      num: "১",
-      title: "ক্যাম্পাসে সরাসরি আগমন ও কাউন্সিলিং",
-      desc: "শিক্ষার্থী অথবা অভিভাবককে সরাসরি আমাদের কোচিং সেন্টারে উপস্থিত হতে হবে। অভিজ্ঞ শিক্ষক ও কাউন্সিলর শিক্ষার্থীর পূর্ববর্তী ফলাফল ও শিখন ঘাটতি বিশ্লেষণ করে সঠিক ব্যাচ নির্ধারণ করে দেবেন।",
-      icon: School,
-    },
-    {
-      num: "২",
-      title: "প্রয়োজনীয় কাগজপত্র যাচাই ও জমা",
-      desc: "শিক্ষার্থীর ২ কপি পাসপোর্ট ছবি, পূর্ববর্তী শ্রেণির সর্বশেষ পরীক্ষার মার্কশিটের কপি এবং অভিভাবকের পরিচয়পত্রের তথ্য অফিসে সরাসরি জমা দিতে হবে।",
-      icon: FileCheck,
-    },
-    {
-      num: "৩",
-      title: "অ্যাডমিন কর্তৃক সফটওয়্যারে রেজিস্ট্রেশন",
-      desc: "কোচিংয়ের প্রধান অ্যাডমিন বা অনুমোদিত কর্মকর্তা সরাসরি আমাদের সেন্ট্রাল ম্যানেজমেন্ট সফটওয়্যারে শিক্ষার্থীর যাবতীয় তথ্য এন্ট্রি করে একটি ইউনিক ডিজিটাল স্টুডেন্ট আইডি জেনারেট করবেন।",
-      icon: UserCheck,
-    },
-    {
-      num: "৪",
-      title: "ফি প্রদান, আইডি কার্ড ও শিট সংগ্রহ",
-      desc: "অফিস কাউন্টারে ভর্তি ফি ও প্রথম মাসের টিউশন ফি পরিশোধ করে ডিজিটাল স্টুডেন্ট আইডি কার্ড, ক্লাস রুটিন এবং প্রথম মাসের লেকচার শিট সংগ্রহ করে ক্লাস শুরু করা যাবে।",
-      icon: BookOpen,
-    },
-  ];
+  const stepIcons = [School, FileCheck, UserCheck, BookOpen];
+
+  const steps: { num: string; title: string; desc: string; icon: any }[] = settings.admissionSteps?.length
+    ? settings.admissionSteps.map((st: any, idx: number) => ({
+        num: st.num || String(idx + 1),
+        title: st.title,
+        desc: st.desc,
+        icon: stepIcons[idx % stepIcons.length],
+      }))
+    : [
+        {
+          num: "১",
+          title: "ক্যাম্পাসে সরাসরি আগমন ও কাউন্সিলিং",
+          desc: "শিক্ষার্থী অথবা অভিভাবককে সরাসরি আমাদের কোচিং সেন্টারে উপস্থিত হতে হবে। অভিজ্ঞ শিক্ষক ও কাউন্সিলর শিক্ষার্থীর পূর্ববর্তী ফলাফল ও শিখন ঘাটতি বিশ্লেষণ করে সঠিক ব্যাচ নির্ধারণ করে দেবেন।",
+          icon: School,
+        },
+        {
+          num: "২",
+          title: "প্রয়োজনীয় কাগজপত্র যাচাই ও জমা",
+          desc: "শিক্ষার্থীর ২ কপি পাসপোর্ট ছবি, পূর্ববর্তী শ্রেণির সর্বশেষ পরীক্ষার মার্কশিটের কপি এবং অভিভাবকের পরিচয়পত্রের তথ্য অফিসে সরাসরি জমা দিতে হবে।",
+          icon: FileCheck,
+        },
+        {
+          num: "৩",
+          title: "অ্যাডমিন কর্তৃক সফটওয়্যারে রেজিস্ট্রেশন",
+          desc: "কোচিংয়ের প্রধান অ্যাডমিন বা অনুমোদিত কর্মকর্তা সরাসরি আমাদের সেন্ট্রাল ম্যানেজমেন্ট সফটওয়্যারে শিক্ষার্থীর যাবতীয় তথ্য এন্ট্রি করে একটি ইউনিক ডিজিটাল স্টুডেন্ট আইডি জেনারেট করবেন।",
+          icon: UserCheck,
+        },
+        {
+          num: "৪",
+          title: "ফি প্রদান, আইডি কার্ড ও শিট সংগ্রহ",
+          desc: "অফিস কাউন্টারে ভর্তি ফি ও প্রথম মাসের টিউশন ফি পরিশোধ করে ডিজিটাল স্টুডেন্ট আইডি কার্ড, ক্লাস রুটিন এবং প্রথম মাসের লেকচার শিট সংগ্রহ করে ক্লাস শুরু করা যাবে।",
+          icon: BookOpen,
+        },
+      ];
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-800 antialiased">
@@ -96,11 +106,11 @@ export default async function AdmissionsPage() {
                 ভর্তি নির্দেশিকা ২০২৬
               </Badge>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-4 text-white">
-                সরাসরি ক্যাম্পাসে ভর্তির সম্পূর্ণ নির্দেশিকা
+                {settings.admissionsPageTitle || "সরাসরি ক্যাম্পাসে ভর্তির সম্পূর্ণ নির্দেশিকা"}
               </h1>
               <p className="text-base sm:text-lg text-teal-100 leading-relaxed">
-                প্রতিটি ব্যাচে সীমিত আসন থাকায় গুণগত মান অক্ষুণ্ণ রাখা হয়। শিক্ষার্থীর
-                সঠিক মূল্যায়ন ও ব্যাচ নিশ্চিত করতে সরাসরি অফিসে এসে ভর্তি সম্পন্ন করুন।
+                {settings.admissionsPageSubtitle ||
+                  "প্রতিটি ব্যাচে সীমিত আসন থাকায় গুণগত মান অক্ষুণ্ণ রাখা হয়। শিক্ষার্থীর সঠিক মূল্যায়ন ও ব্যাচ নিশ্চিত করতে সরাসরি অফিসে এসে ভর্তি সম্পন্ন করুন।"}
               </p>
             </div>
           </div>
@@ -116,15 +126,12 @@ export default async function AdmissionsPage() {
               </div>
               <div className="flex-1 space-y-1 text-xs sm:text-sm">
                 <h3 className="font-bold text-base text-amber-950">
-                  ভর্তি সংক্রান্ত প্রাতিষ্ঠানিক নিয়মাবলী (সরাসরি ভর্তি বাধ্যতামূলক)
+                  {settings.admissionsNoticeTitle ||
+                    "ভর্তি সংক্রান্ত প্রাতিষ্ঠানিক নিয়মাবলী (সরাসরি ভর্তি বাধ্যতামূলক)"}
                 </h3>
                 <p className="text-amber-800 leading-relaxed">
-                  আমাদের কোচিং সেন্টারে গুণগত মান বজায় রাখা এবং উপযুক্ত ব্যাচ নির্বাচনের
-                  স্বার্থে কোনো অনলাইন ভর্তি আবেদন ফরম রাখা হয়নি। শিক্ষার্থী বা সম্মানিত
-                  অভিভাবককে <strong>সরাসরি আমাদের শাখায় উপস্থিত হয়ে</strong> ভর্তি
-                  কার্যক্রম সম্পন্ন করতে হবে। কোচিংয়ের প্রধান অ্যাডমিন বা অনুমোদিত
-                  কর্মকর্তা সরাসরি সফটওয়্যারে শিক্ষার্থীর তথ্য এন্ট্রি করে ভর্তি সম্পন্ন
-                  করবেন।
+                  {settings.admissionsNoticeText ||
+                    "আমাদের কোচিং সেন্টারে গুণগত মান বজায় রাখা এবং উপযুক্ত ব্যাচ নির্বাচনের স্বার্থে কোনো অনলাইন ভর্তি আবেদন ফরম রাখা হয়নি। শিক্ষার্থী বা সম্মানিত অভিভাবককে সরাসরি আমাদের শাখায় উপস্থিত হয়ে ভর্তি কার্যক্রম সম্পন্ন করতে হবে। কোচিংয়ের প্রধান অ্যাডমিন বা অনুমোদিত কর্মকর্তা সরাসরি সফটওয়্যারে শিক্ষার্থীর তথ্য এন্ট্রি করে ভর্তি সম্পন্ন করবেন।"}
                 </p>
               </div>
               <div className="shrink-0 pt-2 sm:pt-0">
@@ -197,56 +204,28 @@ export default async function AdmissionsPage() {
                       অফিসে আসার সময় নিচের নথিপত্র সঙ্গে নিয়ে আসুন
                     </p>
                   </CardHeader>
-                  <CardContent className="space-y-3.5 pt-5 text-sm text-slate-700">
-                    <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-                      <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
-                      <div>
-                        <strong className="text-slate-900 text-sm">
-                          শিক্ষার্থীর ২ কপি পাসপোর্ট সাইজের রঙিন ছবি
-                        </strong>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          ডিজিটাল স্টুডেন্ট আইডি ও অফিশিয়াল ফাইলে সংযুক্ত করার জন্য।
-                        </p>
+                  <CardContent className="space-y-3 pt-5 text-sm text-slate-700">
+                    {(settings.admissionRequirements?.length
+                      ? settings.admissionRequirements
+                      : [
+                          "শিক্ষার্থীর ২ কপি পাসপোর্ট সাইজের রঙিন ছবি (ডিজিটাল স্টুডেন্ট আইডি ও অফিশিয়াল ফাইলে সংযুক্ত করার জন্য)",
+                          "বিগত শ্রেণির সর্বশেষ পরীক্ষার ফলাফল বা মূল/অনলাইন মার্কশিট (শিক্ষার্থীর মেধা ও শিখন স্তর মূল্যায়নের জন্য)",
+                          "পিতা / মাতার জাতীয় পরিচয়পত্রের (NID) বা জন্ম নিবন্ধনের ফটোকপি (অভিভাবকের প্রাতিষ্ঠানিক রেকর্ড সংরক্ষণের জন্য)",
+                          "সচল অভিভাবক ও শিক্ষার্থীর মোবাইল নম্বর (দৈনিক ক্লাসরুম হাজিরা, পরীক্ষার নম্বর ও নোটিফিকেশন এসএমএসের জন্য)",
+                        ]
+                    ).map((reqItem: string, idx: number) => (
+                      <div
+                        key={idx}
+                        className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100"
+                      >
+                        <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+                        <div>
+                          <strong className="text-slate-900 text-sm leading-snug">
+                            {reqItem}
+                          </strong>
+                        </div>
                       </div>
-                    </div>
-
-                    <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-                      <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
-                      <div>
-                        <strong className="text-slate-900 text-sm">
-                          বিগত শ্রেণির সর্বশেষ পরীক্ষার ফলাফল বা মার্কশিট
-                        </strong>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          শিক্ষার্থীর মেধা ও শিখন স্তর মূল্যায়নের জন্য মূল মার্কশিট বা
-                          ফটোকপি।
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-                      <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
-                      <div>
-                        <strong className="text-slate-900 text-sm">
-                          পিতা / মাতার জাতীয় পরিচয়পত্রের (NID) ফটোকপি
-                        </strong>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          অভিভাবকের প্রাতিষ্ঠানিক রেকর্ড সংরক্ষণের জন্য।
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-                      <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
-                      <div>
-                        <strong className="text-slate-900 text-sm">
-                          সচল অভিভাবক ও শিক্ষার্থীর মোবাইল নম্বর
-                        </strong>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          দৈনিক ক্লাসরুম হাজিরা, পরীক্ষার নম্বর ও নোটিফিকেশন এসএমএসের
-                          জন্য।
-                        </p>
-                      </div>
-                    </div>
+                    ))}
                   </CardContent>
                 </Card>
 

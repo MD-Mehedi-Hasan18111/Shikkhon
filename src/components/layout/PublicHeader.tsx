@@ -99,9 +99,11 @@ export function PublicHeader({ settings }: PublicHeaderProps = {}) {
 
   const activeSettings = liveSettings || settings;
   const institutionName = activeSettings?.institutionName || bn.institution.name;
+  const institutionShortName = activeSettings?.shortName || activeSettings?.institutionName || "শিক্ষণ";
+  const institutionLogoUrl = activeSettings?.logoUrl || "/images/logo.png";
   const institutionMotto = activeSettings?.motto || bn.institution.motto;
   const institutionAddress = activeSettings?.address || bn.institution.address;
-  const contactPhone = activeSettings?.contactPhone || activeSettings?.phones?.[0] || bn.institution.phones[0];
+  const contactPhone = activeSettings?.phones?.[0] || activeSettings?.contactPhone || bn.institution.phones[0];
   const socialLinks = activeSettings?.socialLinks || {};
 
   const currentUser = auth.user;
@@ -192,20 +194,20 @@ export function PublicHeader({ settings }: PublicHeaderProps = {}) {
 
       {/* Main Navigation Bar */}
       <div className="max-w-[1440px] mx-auto px-3 sm:px-5 h-16 flex items-center justify-between gap-2">
-        {/* Logo and Name - Shikkhon only */}
+        {/* Logo and Name - Dynamic from Site Settings */}
         <Link href="/" className="flex items-center gap-2.5 group shrink-0">
-          <div className="relative h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-white border border-slate-200 p-1 shadow-2xs flex items-center justify-center shrink-0">
-            <Image
-              src="/images/logo.png"
-              alt="শিক্ষণ"
-              width={38}
-              height={38}
-              className="object-contain"
-              priority
+          <div className="relative h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-white border border-slate-200 p-1 shadow-2xs flex items-center justify-center shrink-0 overflow-hidden">
+            <img
+              src={institutionLogoUrl}
+              alt={institutionShortName}
+              className="max-h-full max-w-full object-contain"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = "/images/logo.png";
+              }}
             />
           </div>
-          <span className="font-extrabold text-xl sm:text-2xl text-[#00636b] tracking-tight group-hover:text-[#004f56] transition leading-tight">
-            শিক্ষণ
+          <span className="font-extrabold text-xl sm:text-2xl text-[#00636b] tracking-tight group-hover:text-[#004f56] transition leading-tight truncate max-w-[200px] sm:max-w-[280px]">
+            {institutionShortName}
           </span>
         </Link>
 

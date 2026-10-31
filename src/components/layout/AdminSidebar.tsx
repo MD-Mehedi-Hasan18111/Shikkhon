@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -50,6 +51,37 @@ export function AdminSidebar() {
   const { sidebarCollapsed, mobileMenuOpen } = useAppSelector((state) => state.ui);
   const user = useAppSelector((state) => state.auth.user);
   const unreadMessagesCount = useUnreadMessages();
+
+  const [siteSettings, setSiteSettings] = useState<{
+    institutionName: string;
+    shortName: string;
+    logoUrl: string;
+  }>({
+    institutionName: bn.institution.name,
+    shortName: bn.institution.shortName,
+    logoUrl: "/images/logo.png",
+  });
+
+  useEffect(() => {
+    const fetchSettings = () => {
+      fetch("/api/site-settings")
+        .then((r) => r.json())
+        .then((json) => {
+          if (json?.data) {
+            setSiteSettings({
+              institutionName: json.data.institutionName || bn.institution.name,
+              shortName: json.data.shortName || bn.institution.shortName,
+              logoUrl: json.data.logoUrl || "/images/logo.png",
+            });
+          }
+        })
+        .catch(() => {});
+    };
+
+    fetchSettings();
+    window.addEventListener("site-settings-updated", fetchSettings);
+    return () => window.removeEventListener("site-settings-updated", fetchSettings);
+  }, []);
 
   const navGroups: NavGroup[] = [
     {
@@ -171,19 +203,20 @@ export function AdminSidebar() {
           onClick={handleLinkClick}
           className="flex items-center gap-2.5 overflow-hidden"
         >
-          <div className="h-9 w-9 rounded-lg bg-white border border-slate-200 p-0.5 flex items-center justify-center shrink-0 shadow-2xs">
-            <Image
-              src="/images/logo.png"
-              alt={bn.institution.shortName}
-              width={32}
-              height={32}
-              className="object-contain"
+          <div className="h-9 w-9 rounded-lg bg-white border border-slate-200 p-0.5 flex items-center justify-center shrink-0 shadow-2xs overflow-hidden">
+            <img
+              src={siteSettings.logoUrl}
+              alt={siteSettings.shortName}
+              className="max-h-full max-w-full object-contain"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = "/images/logo.png";
+              }}
             />
           </div>
           {!sidebarCollapsed && (
             <div className="flex flex-col min-w-0">
               <span className="font-bold text-sm text-[#00636b] truncate leading-tight">
-                {bn.institution.name}
+                {siteSettings.institutionName}
               </span>
               <span className="text-[10px] text-slate-500 truncate">
                 অ্যাডমিন প্যানেল

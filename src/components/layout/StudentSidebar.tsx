@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -44,6 +45,28 @@ export function StudentSidebar() {
   const { sidebarCollapsed, mobileMenuOpen } = useAppSelector((state) => state.ui);
   const user = useAppSelector((state) => state.auth.user);
   const unreadMessagesCount = useUnreadMessages();
+
+  const [siteSettings, setSiteSettings] = useState<{
+    institutionName: string;
+    logoUrl: string;
+  }>({
+    institutionName: bn.institution.name,
+    logoUrl: "/images/logo.png",
+  });
+
+  useEffect(() => {
+    fetch("/api/site-settings")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json?.data) {
+          setSiteSettings({
+            institutionName: json.data.institutionName || bn.institution.name,
+            logoUrl: json.data.logoUrl || "/images/logo.png",
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const navGroups: NavGroup[] = [
     {
@@ -148,13 +171,20 @@ export function StudentSidebar() {
             href="/dashboard/student"
             className="flex items-center gap-2.5 overflow-hidden group"
           >
-            <div className="h-9 w-9 rounded-xl bg-primary-800 text-white flex items-center justify-center font-bold text-base shrink-0 shadow-xs">
-              <GraduationCap className="h-5 w-5 text-primary-200" />
+            <div className="h-9 w-9 rounded-xl bg-white border border-slate-200 p-0.5 flex items-center justify-center shrink-0 shadow-xs overflow-hidden">
+              <img
+                src={siteSettings.logoUrl}
+                alt={siteSettings.institutionName}
+                className="max-h-full max-w-full object-contain"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = "/images/logo.png";
+                }}
+              />
             </div>
             {!sidebarCollapsed && (
               <div className="flex flex-col min-w-0">
                 <span className="font-extrabold text-sm text-primary-900 tracking-tight truncate leading-tight">
-                  {bn.institution.name}
+                  {siteSettings.institutionName}
                 </span>
                 <span className="text-[10px] text-slate-500 font-medium">
                   শিক্ষার্থী পোর্টাল
