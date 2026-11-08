@@ -3,6 +3,39 @@ import { jwtVerify } from "jose";
 
 const AUTH_COOKIE_NAME = "auth_token";
 
+const EDUCOACH_MASTER_URL = process.env.EDUCOACH_MASTER_URL || "http://localhost:3050";
+const SYSTEM_SLUG = process.env.EDUCOACH_SYSTEM_SLUG || "shikkhon";
+
+let edgeStatusCache: { status: string; reason: string; expiresAt: number } | null = null;
+
+async function getEdgeMasterStatus() {
+  const now = Date.now();
+  if (edgeStatusCache && edgeStatusCache.expiresAt > now) {
+    return edgeStatusCache;
+  }
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1000);
+    const res = await fetch(`${EDUCOACH_MASTER_URL}/api/v1/license/verify?slug=${SYSTEM_SLUG}`, {
+      signal: controller.signal,
+      cache: "no-store",
+    });
+    clearTimeout(timeout);
+    if (res.ok) {
+      const data = await res.json();
+      edgeStatusCache = {
+        status: data.status || "ACTIVE",
+        reason: data.reason || data.message || "",
+        expiresAt: now + 3000,
+      };
+      return edgeStatusCache;
+    }
+  } catch {
+    // fallback if master offline
+  }
+  return { status: "ACTIVE", reason: "", expiresAt: now + 3000 };
+}
+
 function getRoleDashboardUrl(role: string, baseUrl: string): URL {
   if (role === "teacher") {
     return new URL("/dashboard/teacher", baseUrl);
@@ -16,6 +49,32 @@ function getRoleDashboardUrl(role: string, baseUrl: string): URL {
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // Intercept API routes if EduCoach Master toggled MAINTENANCE or SUSPENDED
+  if (pathname.startsWith("/api/") && !pathname.startsWith("/api/health")) {
+    const master = await getEdgeMasterStatus();
+    if (master.status === "MAINTENANCE") {
+      return NextResponse.json(
+        {
+          success: false,
+          status: "MAINTENANCE",
+          message: master.reason || "এডুকোচ সেন্ট্রাল থেকে রক্ষণাবেক্ষণ (Maintenance) চলছে।",
+        },
+        { status: 503 }
+      );
+    }
+    if (master.status === "SUSPENDED") {
+      return NextResponse.json(
+        {
+          success: false,
+          status: "SUSPENDED",
+          message: master.reason || "এই সিস্টেমটির পরিষেবা সাময়িকভাবে স্থগিত রয়েছে।",
+        },
+        { status: 403 }
+      );
+    }
+  }
+
   const token = req.cookies.get(AUTH_COOKIE_NAME)?.value;
 
   const secret =

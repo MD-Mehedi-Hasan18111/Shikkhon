@@ -3,6 +3,8 @@ import { Hind_Siliguri } from "next/font/google";
 import "./globals.css";
 import StoreProvider from "@/components/providers/StoreProvider";
 import ToastContainer from "@/components/ui/ToastContainer";
+import { getEduCoachLicense } from "@/lib/educoach-license";
+import { MaintenanceScreen, SuspendedScreen } from "@/components/EduCoachNotice";
 
 const hindSiliguri = Hind_Siliguri({
   weight: ["300", "400", "500", "600", "700"],
@@ -32,18 +34,33 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Check master remote accessibility & status (ACTIVE, MAINTENANCE, SUSPENDED)
+  const license = await getEduCoachLicense();
+
   return (
     <html lang="bn" className={`${hindSiliguri.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans bg-slate-50 text-slate-900 selection:bg-emerald-500 selection:text-white">
-        <StoreProvider>
-          <ToastContainer />
-          {children}
-        </StoreProvider>
+        {license.status === "MAINTENANCE" ? (
+          <MaintenanceScreen
+            reason={license.reason || license.message}
+            systemName="শিক্ষণ"
+          />
+        ) : license.status === "SUSPENDED" || (!license.allowed && license.status !== "ACTIVE") ? (
+          <SuspendedScreen
+            reason={license.reason || license.message}
+            systemName="শিক্ষণ"
+          />
+        ) : (
+          <StoreProvider>
+            <ToastContainer />
+            {children}
+          </StoreProvider>
+        )}
       </body>
     </html>
   );

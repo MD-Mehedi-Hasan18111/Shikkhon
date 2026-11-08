@@ -13,6 +13,7 @@ import {
 import { Student } from "@/models/Student";
 import { User } from "@/models/User";
 import { Teacher } from "@/models/Teacher";
+import { getEduCoachLicense } from "@/lib/educoach-license";
 
 const createStudentSchema = z.object({
   fullName: z.string().trim().min(2, "পুরো নাম কমপক্ষে ২ অক্ষরের হতে হবে"),
@@ -117,6 +118,23 @@ export const POST = createApiHandler(
     verifyCsrfProtection(req);
     const session = await getAuthenticatedUser(req);
     requireRole(session, ["super_admin", "admin"]);
+
+    // Enforce EduCoach Master Accessibility and Free Subscription Limit (Max 200 Students)
+    const license = await getEduCoachLicense();
+    if (!license.allowed) {
+      throw AppError.forbidden(
+        "Access Restricted by EduCoach Master",
+        license.message || "সিস্টেমের লাইসেন্স স্থগিত বা রক্ষণাবেক্ষণে রয়েছে।"
+      );
+    }
+    const maxStudents = license.quotas?.maxStudents ?? 200;
+    const currentActiveStudents = await Student.countDocuments({ status: "active" });
+    if (currentActiveStudents >= maxStudents) {
+      throw AppError.forbidden(
+        "Free Tier Student Limit Reached",
+        `ফ্রি সাবস্ক্রিপশন প্যাকেজের সর্বোচ্চ সীমা (${maxStudents} জন শিক্ষার্থী) পূর্ণ হয়েছে। নতুন শিক্ষার্থী ভর্তির জন্য EduCoach সেন্ট্রাল প্ল্যাটফর্মে প্ল্যান আপগ্রেড করুন।`
+      );
+    }
 
     const body = await req.json();
     const validated = createStudentSchema.parse(body);

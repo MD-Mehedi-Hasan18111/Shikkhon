@@ -10,6 +10,7 @@ import { AcademicSession } from "@/models/AcademicSession";
 import { Teacher } from "@/models/Teacher";
 import { Student } from "@/models/Student";
 import { Enrollment } from "@/models/Enrollment";
+import { getEduCoachLicense } from "@/lib/educoach-license";
 
 const timeFormatSchema = z.string().transform((val, ctx) => {
   const trimmed = val.trim();
@@ -181,6 +182,23 @@ export const POST = createApiHandler(
     verifyCsrfProtection(req);
     const session = await getAuthenticatedUser(req);
     requireRole(session, ["super_admin", "admin"]);
+
+    // Enforce EduCoach Master Accessibility and Free Subscription Limit (Max 10 Batches)
+    const license = await getEduCoachLicense();
+    if (!license.allowed) {
+      throw AppError.forbidden(
+        "Access Restricted by EduCoach Master",
+        license.message || "সিস্টেমের লাইসেন্স স্থগিত বা রক্ষণাবেক্ষণে রয়েছে।"
+      );
+    }
+    const maxBatches = license.quotas?.maxBatches ?? 10;
+    const currentBatches = await Batch.countDocuments();
+    if (currentBatches >= maxBatches) {
+      throw AppError.forbidden(
+        "Free Tier Batch Limit Reached",
+        `ফ্রি সাবস্ক্রিপশন প্যাকেজের সর্বোচ্চ সীমা (${maxBatches}টি ব্যাচ) পূর্ণ হয়েছে। নতুন ব্যাচ খোলার জন্য EduCoach সেন্ট্রাল প্ল্যাটফর্মে প্ল্যান আপগ্রেড করুন।`
+      );
+    }
 
     const body = await req.json();
     const validated = createBatchSchema.parse(body);
