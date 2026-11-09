@@ -93,7 +93,7 @@ export function SuspendedScreen({
           </p>
         </div>
 
-        <div className="pt-2">
+        {/* <div className="pt-2">
           <a
             href="http://localhost:3050/login"
             target="_blank"
@@ -103,7 +103,7 @@ export function SuspendedScreen({
             <Globe className="h-4 w-4" />
             <span>EduCoach Master পোর্টালে যান</span>
           </a>
-        </div>
+        </div> */}
 
         <p className="text-[11px] text-slate-500 font-medium">
           EduCoach Central SaaS Management
